@@ -1202,7 +1202,7 @@
             armWatchdog();
         }
 
-        function connectStream() {
+        function connectStream(autoplayBlocked) {
             try { audio.pause(); } catch (e) {}
             audio.removeAttribute('src');
             try { audio.load(); } catch (e) {}
@@ -1212,6 +1212,10 @@
             if (attempt && typeof attempt.catch === 'function') {
                 attempt.catch(err => {
                     if (err && err.name === 'AbortError') return; // cancelled by the user
+                    if (err && err.name === 'NotAllowedError' && autoplayBlocked) {
+                        autoplayBlocked(err); // autoplay rejected before any user gesture
+                        return;
+                    }
                     console.log('Playback error:', err);
                     handleStreamFailure();
                 });
@@ -1277,6 +1281,24 @@
         function retryPlayback() {
             if (isPlaying || isConnecting) { stopPlayback(); return; }
             startPlayback(); // manual retry resets the attempt counter
+        }
+
+        // Try to start the stream automatically when the page opens.
+        // Browsers may reject this (NotAllowedError) until the user has
+        // interacted with the page — in that case we stop cleanly and leave
+        // the play button ready for a manual start.
+        function autoplayOnOpen() {
+            reconnectAttempts = 0;
+            reconnecting = false;
+            isConnecting = true;
+            isPlaying = false;
+            lastProgress = Date.now();
+            setPlayStatus('connecting');
+            armWatchdog();
+            connectStream(() => {
+                console.log('Autoplay blocked by the browser; waiting for a click.');
+                stopPlayback();
+            });
         }
 
         // Watchdog: if the stream stops making progress (no playing/timeupdate/
@@ -1712,6 +1734,9 @@
         setInterval(applyHourTheme, 60000);
         setInterval(renderSun, 60000);
         setInterval(renderTopDate, 60000);
+
+        // Auto-play the stream when the page opens (browsers may block until user interaction)
+        autoplayOnOpen();
 
         // Fetch quote immediately, refresh every 5 minutes, and show the countdown
         fetchNewQuote();
