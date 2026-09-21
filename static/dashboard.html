@@ -1131,11 +1131,15 @@
                 document.getElementById('playerStatus').textContent = 'Paused';
             } else {
                 activePlayingId = stationId;
-                audio.src = `/station/${stationId}`;
-                audio.play().catch(e => console.log('Autoplay error:', e));
                 document.getElementById('playerIcon').textContent = station.icon || '📻';
                 document.getElementById('playerTitle').textContent = station.name;
-                document.getElementById('playerStatus').textContent = `Streaming Live • 128kbps MP3`;
+                document.getElementById('playerStatus').textContent = 'Connecting…';
+                audio.src = `/station/${stationId}`;
+                audio.load();
+                audio.play().catch(e => {
+                    console.log('Autoplay error:', e);
+                    document.getElementById('playerStatus').textContent = 'Connection failed';
+                });
             }
             renderStations();
         }
@@ -1202,6 +1206,26 @@
             audioEl.addEventListener('pause', () => bgEl.classList.remove('playing-active'));
             audioEl.addEventListener('ended', () => bgEl.classList.remove('playing-active'));
         }
+
+        // Tiny connection / buffering status for the studio player
+        (function initPlayerStatus() {
+            const el = document.getElementById('audioElement');
+            const statusEl = document.getElementById('playerStatus');
+            if (!el || !statusEl) return;
+            el.addEventListener('playing', () => {
+                statusEl.textContent = 'Streaming Live • 128kbps MP3';
+            });
+            el.addEventListener('waiting', () => {
+                statusEl.textContent = 'Buffering…';
+            });
+            el.addEventListener('stalled', () => {
+                statusEl.textContent = 'Reconnecting…';
+            });
+            el.addEventListener('error', () => {
+                if (!el.currentSrc && !el.getAttribute('src')) return;
+                statusEl.textContent = 'Connection failed';
+            });
+        })();
 
         // ========================================================
         // 1. DYNAMIC HIJRI MOON CALCULATION & RENDERING

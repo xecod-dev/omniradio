@@ -331,16 +331,16 @@
 
         .art-box {
             flex: 0 0 auto;
-            width: 74px;
-            height: 74px;
+            width: 92px;
+            height: 92px;
             background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02));
             border: 1.5px solid rgba(255, 255, 255, 0.14);
             box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 22px var(--theme-glow);
-            border-radius: 20px;
+            border-radius: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 36px;
+            font-size: 45px;
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
             position: relative;
         }
@@ -429,12 +429,61 @@
         }
 
         .controls-right {
+            position: relative;
             flex: 1 1 auto;
             min-width: 0;
             display: flex;
             flex-direction: column;
             gap: 8px;
             align-items: stretch;
+        }
+
+        /* Tiny "connecting / loading" status message.
+           Absolutely positioned over the visualizer so it never shifts the layout. */
+        .play-status {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--theme-accent);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            white-space: nowrap;
+            direction: rtl;
+        }
+
+        .play-status.show {
+            opacity: 1;
+        }
+
+        .play-status.error {
+            color: #f87171;
+        }
+
+        .play-spinner {
+            width: 10px;
+            height: 10px;
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            border-top-color: var(--theme-accent);
+            border-radius: 50%;
+            animation: playSpin 0.7s linear infinite;
+            flex: 0 0 auto;
+        }
+
+        .play-status.error .play-spinner {
+            display: none;
+        }
+
+        @keyframes playSpin {
+            to { transform: rotate(360deg); }
         }
 
         /* Animated Audio Visualizer Bars */
@@ -444,6 +493,11 @@
             justify-content: center;
             gap: 4px;
             height: 22px;
+            transition: opacity 0.25s ease;
+        }
+
+        .visualizer.faded {
+            opacity: 0;
         }
 
         .bar {
@@ -808,6 +862,10 @@
                         <div class="bar"></div>
                         <div class="bar"></div>
                     </div>
+                    <div class="play-status" id="playStatus" role="status" aria-live="polite">
+                        <span class="play-spinner"></span>
+                        <span id="playStatusText"></span>
+                    </div>
                     <div class="vol-container">
                         <span class="vol-icon" id="volIcon" onclick="toggleMute()">🔊</span>
                         <input type="range" class="vol-slider" id="volSlider" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)">
@@ -875,23 +933,94 @@
         const volSlider = document.getElementById('volSlider');
 
         let isPlaying = false;
+        let isConnecting = false;
+
+        const playStatus = document.getElementById('playStatus');
+        const playStatusText = document.getElementById('playStatusText');
+
+        // mode: 'connecting' | 'loading' | 'error' | null
+        function setPlayStatus(mode) {
+            if (!playStatus) return;
+            if (!mode) {
+                playStatus.classList.remove('show', 'error');
+                visualizer.classList.remove('faded');
+                return;
+            }
+            const labels = {
+                connecting: 'جارٍ الاتصال…',
+                loading: 'جارٍ التحميل…',
+                error: 'تعذّر الاتصال، حاول مجددًا'
+            };
+            if (playStatusText) playStatusText.textContent = labels[mode] || '';
+            playStatus.classList.toggle('error', mode === 'error');
+            playStatus.classList.add('show');
+            visualizer.classList.add('faded');
+        }
 
         function togglePlay() {
+            // Clicking again while still connecting cancels the attempt
+            if (isConnecting) {
+                stopPlayback();
+                return;
+            }
+
             if (!isPlaying) {
+                isConnecting = true;
+                setPlayStatus('connecting');
                 audio.src = streamUrl;
-                audio.play().then(() => {
-                    isPlaying = true;
-                    updateUI(true);
-                }).catch(err => {
-                    console.log("Playback error:", err);
-                });
+                audio.load();
+                const attempt = audio.play();
+                if (attempt && typeof attempt.catch === 'function') {
+                    attempt.catch(err => {
+                        if (err && err.name === 'AbortError') return; // cancelled by the user
+                        console.log("Playback error:", err);
+                        isConnecting = false;
+                        isPlaying = false;
+                        setPlayStatus('error');
+                        updateUI(false);
+                        setTimeout(() => { if (!isPlaying) setPlayStatus(null); }, 3000);
+                    });
+                }
             } else {
-                audio.pause();
-                audio.src = "";
-                isPlaying = false;
-                updateUI(false);
+                stopPlayback();
             }
         }
+
+        function stopPlayback() {
+            try { audio.pause(); } catch (e) {}
+            audio.removeAttribute('src');
+            try { audio.load(); } catch (e) {}
+            isPlaying = false;
+            isConnecting = false;
+            setPlayStatus(null);
+            updateUI(false);
+        }
+
+        // Stream lifecycle -> tiny status message
+        audio.addEventListener('playing', () => {
+            isConnecting = false;
+            isPlaying = true;
+            setPlayStatus(null);
+            updateUI(true);
+        });
+
+        audio.addEventListener('waiting', () => {
+            if (isPlaying) setPlayStatus('loading');
+        });
+
+        audio.addEventListener('stalled', () => {
+            if (isPlaying) setPlayStatus('loading');
+        });
+
+        audio.addEventListener('error', () => {
+            // Ignore the intentional teardown when we clear the src
+            if (!audio.currentSrc && !audio.getAttribute('src')) return;
+            isConnecting = false;
+            isPlaying = false;
+            setPlayStatus('error');
+            updateUI(false);
+            setTimeout(() => { if (!isPlaying) setPlayStatus(null); }, 3000);
+        });
 
         function updateUI(playing) {
             const bg = document.getElementById('islamicBg');
