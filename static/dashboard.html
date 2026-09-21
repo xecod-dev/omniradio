@@ -1280,6 +1280,7 @@
             let attempts = 0;
             let lastFailureAt = 0;
             let autoRetryTimer = null;
+            let buffering = false;
 
             function currentStationId() {
                 return activePlayingId || null;
@@ -1314,16 +1315,28 @@
                 connect(true);
             }
 
+            // While buffering, show a live countdown to the automatic retry and
+            // trigger it the moment the countdown reaches zero.
+            function setBufferingStatus() {
+                const secsLeft = Math.max(0, Math.ceil((lastProgress + STALL_MS - Date.now()) / 1000));
+                statusEl.textContent = `Buffering… auto-retry in ${secsLeft}s`;
+                if (secsLeft <= 0 && currentStationId() && !el.paused) {
+                    buffering = false;
+                    handleFailure();
+                }
+            }
+
             el.addEventListener('playing', () => {
                 attempts = 0;
+                buffering = false;
                 lastProgress = Date.now();
                 statusEl.textContent = 'Streaming Live • 128kbps MP3';
             });
             el.addEventListener('waiting', () => {
-                statusEl.textContent = 'Buffering…';
+                buffering = true;
+                setBufferingStatus();
             });
             el.addEventListener('stalled', () => {
-                lastProgress = Date.now();
                 statusEl.textContent = 'Reconnecting…';
             });
             el.addEventListener('timeupdate', () => { lastProgress = Date.now(); });
@@ -1333,6 +1346,12 @@
                 if (!el.currentSrc && !el.getAttribute('src')) return;
                 handleFailure();
             });
+
+            // 1s tick for the buffering countdown
+            setInterval(() => {
+                if (!buffering || el.paused) return;
+                setBufferingStatus();
+            }, 1000);
 
             // Stall watchdog: reconnect if the stream silently stops producing data
             setInterval(() => {

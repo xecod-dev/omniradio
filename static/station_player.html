@@ -1156,7 +1156,10 @@
         const playRetryBtn = document.getElementById('playRetryBtn');
 
         // mode: 'connecting' | 'loading' | 'reconnecting' | 'error' | null
+        let currentStatusMode = null;
+
         function setPlayStatus(mode) {
+            currentStatusMode = mode || null;
             if (!playStatus) return;
             if (!mode) {
                 playStatus.classList.remove('show', 'error');
@@ -1173,6 +1176,22 @@
             playStatus.classList.toggle('error', mode === 'error');
             playStatus.classList.add('show');
             visualizer.classList.add('faded');
+            if (mode === 'loading') updateStatusTick();
+        }
+
+        // While buffering ("loading"), show a live countdown to the automatic retry.
+        // When it reaches zero, trigger the reconnect right away instead of waiting
+        // for the next watchdog poll.
+        function updateStatusTick() {
+            if (currentStatusMode !== 'loading') return;
+            const secsLeft = Math.max(0, Math.ceil((lastProgress + STALL_MS - Date.now()) / 1000));
+            if (playStatusText) {
+                playStatusText.textContent = `جارٍ التحميل… • إعادة تلقائية بعد ${toArDigits(secsLeft)} ث`;
+            }
+            if (secsLeft <= 0 && !reconnecting) {
+                console.log('Loading countdown expired; reconnecting…');
+                handleStreamFailure();
+            }
         }
 
         function togglePlay() {
@@ -1737,6 +1756,9 @@
 
         // Auto-play the stream when the page opens (browsers may block until user interaction)
         autoplayOnOpen();
+
+        // 1s status tick: drives the "auto retry after Xs" countdown while buffering
+        setInterval(updateStatusTick, 1000);
 
         // Fetch quote immediately, refresh every 5 minutes, and show the countdown
         fetchNewQuote();
