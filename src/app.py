@@ -101,29 +101,35 @@ STATION_THEMES = {
         "accent": "#f59e0b",
         "glow": "rgba(245, 158, 11, 0.28)"
     },
-    "quran-recitations": {
+    "abdulbasit": {
+        "bg1": "#450a0a",
+        "bg2": "#1c0404",
+        "accent": "#fbbf24",
+        "glow": "rgba(251, 191, 36, 0.28)"
+    },
+    "alminshawi": {
         "bg1": "#0f2b38",
         "bg2": "#081c24",
         "accent": "#2dd4bf",
         "glow": "rgba(45, 212, 191, 0.28)"
     },
-    "somafm-groove": {
-        "bg1": "#2e1065",
-        "bg2": "#0f0524",
+    "alhussary": {
+        "bg1": "#1e1b4b",
+        "bg2": "#09071c",
+        "accent": "#f59e0b",
+        "glow": "rgba(245, 158, 11, 0.28)"
+    },
+    "alafasi": {
+        "bg1": "#0e374e",
+        "bg2": "#061b27",
         "accent": "#38bdf8",
         "glow": "rgba(56, 189, 248, 0.28)"
     },
-    "radio-paradise": {
-        "bg1": "#7c2d12",
-        "bg2": "#1f0b05",
-        "accent": "#fb923c",
-        "glow": "rgba(251, 146, 60, 0.28)"
-    },
-    "local-jukebox": {
-        "bg1": "#1e1b4b",
-        "bg2": "#09071c",
-        "accent": "#60a5fa",
-        "glow": "rgba(96, 165, 250, 0.28)"
+    "local-library": {
+        "bg1": "#291804",
+        "bg2": "#120a01",
+        "accent": "#f59e0b",
+        "glow": "rgba(245, 158, 11, 0.28)"
     }
 }
 
@@ -142,19 +148,19 @@ async def serve_station_player(station_id: str, request: Request):
         raise HTTPException(status_code=500, detail="Player template missing")
 
     theme = STATION_THEMES.get(station_id, {
-        "bg1": "#111827",
-        "bg2": "#030712",
-        "accent": "#00d2ff",
-        "glow": "rgba(0, 210, 255, 0.25)"
+        "bg1": "#064e3b",
+        "bg2": "#022c22",
+        "accent": "#f59e0b",
+        "glow": "rgba(245, 158, 11, 0.25)"
     })
 
     base_url = get_base_url(request)
     html = template_file.read_text(encoding="utf-8")
     html = html.replace("{{STATION_ID}}", station_id)
     html = html.replace("{{STATION_NAME}}", relay.name)
-    html = html.replace("{{STATION_CATEGORY}}", relay.config.get("category", "Radio"))
+    html = html.replace("{{STATION_CATEGORY}}", relay.config.get("category", "Quran"))
     html = html.replace("{{STATION_DESC}}", relay.config.get("description", "بث حي مستمر على مدار 24 ساعة"))
-    html = html.replace("{{STATION_ICON}}", relay.config.get("icon", "📻"))
+    html = html.replace("{{STATION_ICON}}", relay.config.get("icon", "📖"))
     html = html.replace("{{PAGE_URL}}", f"{base_url}/listen/{station_id}")
     html = html.replace("{{THEME_BG1}}", theme["bg1"])
     html = html.replace("{{THEME_BG2}}", theme["bg2"])
@@ -167,21 +173,25 @@ async def serve_station_player(station_id: str, request: Request):
 async def shortcut_quran():
     return RedirectResponse(url="/listen/quran-cairo", status_code=302)
 
-@app.get("/recitations")
-async def shortcut_recitations():
-    return RedirectResponse(url="/listen/quran-recitations", status_code=302)
+@app.get("/abdulbasit")
+async def shortcut_abdulbasit():
+    return RedirectResponse(url="/listen/abdulbasit", status_code=302)
 
-@app.get("/chill")
-async def shortcut_chill():
-    return RedirectResponse(url="/listen/somafm-groove", status_code=302)
+@app.get("/minshawi")
+async def shortcut_minshawi():
+    return RedirectResponse(url="/listen/alminshawi", status_code=302)
 
-@app.get("/paradise")
-async def shortcut_paradise():
-    return RedirectResponse(url="/listen/radio-paradise", status_code=302)
+@app.get("/hussary")
+async def shortcut_hussary():
+    return RedirectResponse(url="/listen/alhussary", status_code=302)
 
-@app.get("/jukebox")
-async def shortcut_jukebox():
-    return RedirectResponse(url="/listen/local-jukebox", status_code=302)
+@app.get("/afasi")
+async def shortcut_afasi():
+    return RedirectResponse(url="/listen/alafasi", status_code=302)
+
+@app.get("/library")
+async def shortcut_library():
+    return RedirectResponse(url="/listen/local-library", status_code=302)
 
 @app.get("/healthz")
 async def healthz():

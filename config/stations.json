@@ -1,6 +1,6 @@
 {
   "server": {
-    "name": "OmniRadio Multi-Station Studio",
+    "name": "OmniRadio Islamic Studio",
     "port": 9000,
     "admin_password": "RadioMaster2026!",
     "ftp_port": 2121,
@@ -11,72 +11,81 @@
   "stations": [
     {
       "id": "quran-cairo",
-      "name": "إذاعة القرآن الكريم (بث مباشر)",
-      "name_en": "Holy Quran Radio (Live Stream)",
-      "category": "Quran & Islamic",
-      "description": "بث إذاعي مباشر عالي الجودة على مدار الساعة",
+      "name": "إذاعة القرآن الكريم (القاهرة)",
+      "name_en": "Holy Quran Radio Cairo",
+      "category": "Quran Live",
+      "description": "بث مباشر لإذاعة القرآن الكريم من القاهرة على مدار الساعة",
       "icon": "🕌",
       "sources": [
         "https://stream.radiojar.com/8s5u5tpdtwzuv",
+        "https://qurango.net/radio/salma",
         "http://live.mp3quran.net:8006/;",
-        "http://qurango.net/radio/salma",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
     },
     {
-      "id": "quran-recitations",
-      "name": "تلاوات مختارة للقرآن الكريم",
-      "name_en": "Selected Quran Recitations",
-      "category": "Quran & Islamic",
-      "description": "Continuous high quality Quran recitations stream",
+      "id": "abdulbasit",
+      "name": "الشيخ عبد الباسط عبد الصمد",
+      "name_en": "Sheikh Abdulbasit Abdulsamad (Mojawwad)",
+      "category": "Quran Recitations",
+      "description": "تلاوات نادرة ومصحف مجود بصوت الشيخ عبد الباسط عبد الصمد",
       "icon": "📖",
       "sources": [
-        "http://live.mp3quran.net:8006/;",
-        "http://qurango.net/radio/salma",
+        "https://qurango.net/radio/abdulbasit_abdulsamad_mojawwad",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
     },
     {
-      "id": "somafm-groove",
-      "name": "SomaFM - Groove Salad",
-      "name_en": "SomaFM - Groove Salad (Chillout)",
-      "category": "Chill / Ambient",
-      "description": "Downtempo, chillout ambient beats",
-      "icon": "🌿",
+      "id": "alminshawi",
+      "name": "الشيخ محمد صديق المنشاوي",
+      "name_en": "Sheikh Mohammed Siddiq Al-Minshawi",
+      "category": "Quran Recitations",
+      "description": "المصحف المرتل برواية حفص عن عاصم بصوت الشيخ المنشاوي",
+      "icon": "📖",
       "sources": [
-        "https://ice1.somafm.com/groovesalad-128-mp3",
-        "https://ice2.somafm.com/groovesalad-128-mp3",
-        "https://ice4.somafm.com/groovesalad-128-mp3",
-        "local:/app/audio/ambient"
+        "https://qurango.net/radio/mohammed_siddiq_alminshawi",
+        "local:/app/audio/quran"
       ],
       "bitrate": 128
     },
     {
-      "id": "radio-paradise",
-      "name": "Radio Paradise",
-      "name_en": "Radio Paradise (Main Mix)",
-      "category": "World & Rock",
-      "description": "Eclectic blend of song-oriented modern & classic rock, world, electronica",
-      "icon": "🌴",
+      "id": "alhussary",
+      "name": "الشيخ محمود خليل الحصري",
+      "name_en": "Sheikh Mahmoud Khalil Al-Hussary",
+      "category": "Quran Recitations",
+      "description": "المصحف المرتل المتقن بصوت الشيخ الحصري",
+      "icon": "📖",
       "sources": [
-        "https://stream.radioparadise.com/mp3-128",
-        "local:/app/audio/ambient"
+        "https://qurango.net/radio/mahmoud_khalil_alhussary",
+        "local:/app/audio/quran"
       ],
       "bitrate": 128
     },
     {
-      "id": "local-jukebox",
-      "name": "محطة الملفات المرفوعة (Local MP3)",
-      "name_en": "Local Uploaded MP3 Jukebox",
-      "category": "Local Jukebox",
-      "description": "Plays custom uploaded MP3 files from Web Upload or FTP folder",
+      "id": "alafasi",
+      "name": "الشيخ مشاري بن راشد العفاسي",
+      "name_en": "Sheikh Mishary Rashid Al-Afasy",
+      "category": "Quran Recitations",
+      "description": "تلاوات خاشعة ومختارة بصوت الشيخ مشاري العفاسي",
+      "icon": "📖",
+      "sources": [
+        "https://qurango.net/radio/mishary_alafasi",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
+      "id": "local-library",
+      "name": "المكتبة الصوتية والملفات المرفوعة",
+      "name_en": "Islamic Audio Library (Uploads)",
+      "category": "Islamic Library",
+      "description": "مكتبة الدروس والتلاوات المرفوعة عبر الويب أو FTP",
       "icon": "📁",
       "sources": [
         "local:/app/audio/uploads",
-        "local:/app/audio/quran",
-        "local:/app/audio/ambient"
+        "local:/app/audio/quran"
       ],
       "bitrate": 128
     }

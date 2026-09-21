@@ -44,17 +44,19 @@ docker compose up -d --build
 
 ## 📻 Pre-Configured Stations
 
-1. **🕌 Holy Quran Radio (إذاعة القرآن الكريم - بث مباشر)**
+1. **🕌 Holy Quran Radio Cairo (إذاعة القرآن الكريم - القاهرة)**
    - Sources: Radiojar Live Cairo Stream ➔ MP3Quran Direct ➔ Qurango Live ➔ Local recitations
-   - URL: `/quran` or `/listen/quran-cairo`
-2. **📖 Selected Quran Recitations (تلاوات مختارة)**
-   - URL: `/recitations` or `/listen/quran-recitations`
-3. **🌿 SomaFM – Groove Salad (Chillout / Ambient)**
-   - URL: `/chill` or `/listen/somafm-groove`
-4. **🌴 Radio Paradise (Eclectic Rock & World)**
-   - URL: `/paradise` or `/listen/radio-paradise`
-5. **📁 Local MP3 Jukebox (محطة الملفات المرفوعة)**
-   - URL: `/jukebox` or `/listen/local-jukebox`
+   - Dedicated URL: `/quran` or `/listen/quran-cairo`
+2. **📖 Sheikh Abdulbasit Abdulsamad (الشيخ عبد الباسط عبد الصمد - المصحف المجود)**
+   - Dedicated URL: `/abdulbasit` or `/listen/abdulbasit`
+3. **📖 Sheikh Mohammed Siddiq Al-Minshawi (الشيخ محمد صديق المنشاوي - المصحف المرتل)**
+   - Dedicated URL: `/minshawi` or `/listen/alminshawi`
+4. **📖 Sheikh Mahmoud Khalil Al-Hussary (الشيخ محمود خليل الحصري - المصحف المرتل)**
+   - Dedicated URL: `/hussary` or `/listen/alhussary`
+5. **📖 Sheikh Mishary Rashid Al-Afasy (الشيخ مشاري بن راشد العفاسي)**
+   - Dedicated URL: `/afasi` or `/listen/alafasi`
+6. **📁 Islamic Audio Library & Uploads (المكتبة الصوتية الإسلامية والملفات المرفوعة)**
+   - Dedicated URL: `/library` or `/listen/local-library`
 
 ---
 
