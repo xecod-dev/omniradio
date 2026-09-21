@@ -10,6 +10,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
+# Baking in version metadata (git sha + release tag passed at build time)
+ARG GIT_SHA=local
+ENV GIT_SHA=$GIT_SHA
+ARG APP_VERSION=2.2.0
+ENV APP_VERSION=$APP_VERSION
+
 # Environment defaults
 ENV AUDIO_DIR=/app/audio
 ENV CONFIG_FILE=/app/config/stations.json

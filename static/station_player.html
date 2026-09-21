@@ -850,6 +850,44 @@
             text-decoration: underline;
         }
 
+        .footer-ver.has-version {
+            color: var(--theme-accent);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .footer-dl {
+            color: var(--theme-accent);
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            border-radius: 999px;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+
+        .footer-dl:hover {
+            background: rgba(255, 255, 255, 0.08);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 640px) {
+            footer {
+                flex-wrap: wrap;
+                gap: 6px;
+                justify-content: center;
+            }
+            .footer-left {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
         /* =========================================
            Responsive refinements
            ========================================= */
@@ -1054,6 +1092,8 @@
         <div class="footer-left">
             <span>Designed and developed by <a href="https://xecod.com" target="_blank" style="color: var(--theme-accent); font-weight: bold; text-decoration: none;">xecod.com</a></span>
             <span class="footer-os"><a href="https://github.com/xecod-dev/omniradio" target="_blank" style="color: var(--theme-accent); font-weight: bold; text-decoration: none;">صدقة جارية مفتوح المصدر</a></span>
+            <span class="footer-ver" id="footerVersion"></span>
+            <a class="footer-dl" href="/playlist.m3u" title="تحميل قائمة المحطات الأحدث">تحميل القائمة</a>
         </div>
         <a href="/" class="other-stations-link">
             <span>جميع المحطات</span>
@@ -1814,6 +1854,21 @@
                 audio.play().catch(() => {});
             }
         });
+
+        // Version badge: detect new edits released by the station owner
+        (function loadVersionBadge() {
+            const badge = document.getElementById("footerVersion");
+            if (!badge) return;
+            fetch("/api/version")
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(v => {
+                    const dt = v.updated ? new Date(v.updated + "T00:00:00") : null;
+                    const dateStr = dt ? dt.toLocaleDateString("ar-EG", { year: "numeric", month: "long", day: "numeric" }) : "";
+                    badge.textContent = "الإصدار " + v.version + (v.commit && v.commit !== "local" ? " • " + v.commit.slice(0, 7) : "") + (dateStr ? " • " + dateStr : "");
+                    badge.classList.add("has-version");
+                })
+                .catch(() => { badge.textContent = ""; });
+        })();
     </script>
 </body>
 </html>

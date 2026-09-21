@@ -21,6 +21,11 @@ from .engine import RadioEngine
 from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
 
+# Version metadata — bumped by hand on release edits; commit baked at Docker build time.
+APP_VERSION = os.getenv("APP_VERSION", "2.2.0")
+GIT_SHA = os.getenv("GIT_SHA", "local")
+APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-21")
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -565,5 +570,26 @@ async def api_get_status(request: Request):
         "total_listeners": sum(r.listeners_count for r in engine.relays.values()),
         "current_listeners": sum(r.listeners_count for r in engine.relays.values()),
         "all_time_listeners": quotes_manager.get_all_time_listeners(),
-        "total_stations": len(engine.relays)
+        "total_stations": len(engine.relays),
+        "version": APP_VERSION,
+        "commit": GIT_SHA,
+        "updated": APP_UPDATED
+    }
+
+@app.get("/api/version")
+async def api_get_version(request: Request):
+    """Public version metadata so users/clients can detect when a new edit is released."""
+    base_url = get_base_url(request)
+    return {
+        "version": APP_VERSION,
+        "commit": GIT_SHA,
+        "updated": APP_UPDATED,
+        "station_count": len(engine.relays),
+        "stage": "live" if GIT_SHA != "local" else "dev",
+        "download_url": f"{base_url}/playlist.m3u",
+        "endpoints": {
+            "master_playlist_m3u": f"{base_url}/playlist.m3u",
+            "live_stream": f"{base_url}/live",
+            "api": f"{base_url}/api/status"
+        }
     }

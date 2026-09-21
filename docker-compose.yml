@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        GIT_SHA: ${GIT_SHA:-local}
+        APP_VERSION: ${APP_VERSION:-2.2.0}
     image: radio-app:latest
     container_name: radio-app
     restart: unless-stopped
