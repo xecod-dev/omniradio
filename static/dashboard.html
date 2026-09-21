@@ -1267,24 +1267,82 @@
             audioEl.addEventListener('ended', () => bgEl.classList.remove('playing-active'));
         }
 
-        // Tiny connection / buffering status for the studio player
+        // Tiny connection / buffering status + stall watchdog for the studio player
         (function initPlayerStatus() {
             const el = document.getElementById('audioElement');
             const statusEl = document.getElementById('playerStatus');
             if (!el || !statusEl) return;
+            const STALL_MS = 30000;       // no progress for 30s = dead connection
+            const STALL_POLL_MS = 5000;   // watchdog heartbeat
+            const MAX_ATTEMPTS = 3;       // reconnects before showing "failed"
+            const AUTO_RETRY_MS = 300000; // auto-refresh every 5 minutes
+            let lastProgress = Date.now();
+            let attempts = 0;
+            let lastFailureAt = 0;
+            let autoRetryTimer = null;
+
+            function currentStationId() {
+                return activePlayingId || null;
+            }
+            function connect(silent) {
+                const sid = currentStationId();
+                if (!sid) return;
+                if (!silent) statusEl.textContent = 'Reconnecting…';
+                try { el.pause(); } catch (e) {}
+                el.src = `/station/${sid}`;
+                el.load();
+                el.play().catch(e => {
+                    console.log('Reconnect error:', e);
+                });
+            }
+            function handleFailure() {
+                const now = Date.now();
+                if (now - lastFailureAt < 2000) return; // debounce burst error events
+                lastFailureAt = now;
+                lastProgress = now;
+                attempts++;
+                if (attempts >= MAX_ATTEMPTS) {
+                    attempts = 0;
+                    statusEl.textContent = 'Connection failed — auto-retry in 5 min';
+                    clearTimeout(autoRetryTimer);
+                    autoRetryTimer = setTimeout(() => {
+                        if (currentStationId()) connect(true);
+                    }, AUTO_RETRY_MS);
+                    return;
+                }
+                statusEl.textContent = 'Reconnecting…';
+                connect(true);
+            }
+
             el.addEventListener('playing', () => {
+                attempts = 0;
+                lastProgress = Date.now();
                 statusEl.textContent = 'Streaming Live • 128kbps MP3';
             });
             el.addEventListener('waiting', () => {
                 statusEl.textContent = 'Buffering…';
             });
             el.addEventListener('stalled', () => {
+                lastProgress = Date.now();
                 statusEl.textContent = 'Reconnecting…';
             });
+            el.addEventListener('timeupdate', () => { lastProgress = Date.now(); });
+            el.addEventListener('progress', () => { lastProgress = Date.now(); });
+            el.addEventListener('canplay', () => { lastProgress = Date.now(); });
             el.addEventListener('error', () => {
                 if (!el.currentSrc && !el.getAttribute('src')) return;
-                statusEl.textContent = 'Connection failed';
+                handleFailure();
             });
+
+            // Stall watchdog: reconnect if the stream silently stops producing data
+            setInterval(() => {
+                const sid = currentStationId();
+                if (!sid || el.paused) return;
+                if (Date.now() - lastProgress > STALL_MS) {
+                    console.log('Dashboard stream stalled; reconnecting…');
+                    handleFailure();
+                }
+            }, STALL_POLL_MS);
         })();
 
         // ========================================================

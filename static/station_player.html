@@ -534,6 +534,37 @@
             display: none;
         }
 
+        /* Manual retry button shown when the stream has failed */
+        .retry-btn {
+            display: none;
+            width: 17px;
+            height: 17px;
+            padding: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex: 0 0 auto;
+            transition: transform 0.4s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+        .play-status .retry-btn {
+            pointer-events: auto; /* pill itself is pointer-events:none */
+        }
+        .play-status.error .retry-btn {
+            display: inline-flex;
+        }
+        .retry-btn:hover {
+            background: rgba(212, 175, 55, 0.3);
+            border-color: var(--theme-accent);
+            transform: rotate(180deg);
+        }
+
         @keyframes playSpin {
             to { transform: rotate(360deg); }
         }
@@ -921,6 +952,7 @@
                     <div class="play-status" id="playStatus" role="status" aria-live="polite">
                         <span class="play-spinner"></span>
                         <span id="playStatusText"></span>
+                        <button class="retry-btn" id="playRetryBtn" onclick="retryPlayback()" title="إعادة المحاولة" aria-label="إعادة المحاولة">↻</button>
                     </div>
                     <div class="vol-container">
                         <span class="vol-icon" id="volIcon" onclick="toggleMute()">🔊</span>
@@ -990,11 +1022,21 @@
 
         let isPlaying = false;
         let isConnecting = false;
+        let reconnectAttempts = 0;
+        let reconnecting = false;
+        let lastProgress = Date.now();
+        let watchdogTimer = null;
+        let autoRetryTimer = null;
+        const STALL_MS = 30000;        // no stream progress for 30s -> connection is dead
+        const STALL_POLL_MS = 5000;    // watchdog heartbeat
+        const MAX_ATTEMPTS = 3;        // auto-reconnect tries before showing the retry button
+        const AUTO_RETRY_MS = 300000;  // auto-refresh every 5 minutes while failed
 
         const playStatus = document.getElementById('playStatus');
         const playStatusText = document.getElementById('playStatusText');
+        const playRetryBtn = document.getElementById('playRetryBtn');
 
-        // mode: 'connecting' | 'loading' | 'error' | null
+        // mode: 'connecting' | 'loading' | 'reconnecting' | 'error' | null
         function setPlayStatus(mode) {
             if (!playStatus) return;
             if (!mode) {
@@ -1005,7 +1047,8 @@
             const labels = {
                 connecting: 'جارٍ الاتصال…',
                 loading: 'جارٍ التحميل…',
-                error: 'تعذّر الاتصال، حاول مجددًا'
+                reconnecting: 'جارٍ إعادة الاتصال…',
+                error: 'تعذّر الاتصال'
             };
             if (playStatusText) playStatusText.textContent = labels[mode] || '';
             playStatus.classList.toggle('error', mode === 'error');
@@ -1021,41 +1064,123 @@
             }
 
             if (!isPlaying) {
-                isConnecting = true;
-                setPlayStatus('connecting');
-                audio.src = streamUrl;
-                audio.load();
-                const attempt = audio.play();
-                if (attempt && typeof attempt.catch === 'function') {
-                    attempt.catch(err => {
-                        if (err && err.name === 'AbortError') return; // cancelled by the user
-                        console.log("Playback error:", err);
-                        isConnecting = false;
-                        isPlaying = false;
-                        setPlayStatus('error');
-                        updateUI(false);
-                        setTimeout(() => { if (!isPlaying) setPlayStatus(null); }, 3000);
-                    });
-                }
+                startPlayback();
             } else {
                 stopPlayback();
             }
         }
 
-        function stopPlayback() {
+        function startPlayback() {
+            clearTimeout(autoRetryTimer);
+            autoRetryTimer = null;
+            reconnectAttempts = 0;
+            reconnecting = false;
+            isConnecting = true;
+            isPlaying = false;
+            lastProgress = Date.now();
+            setPlayStatus('connecting');
+            connectStream();
+            armWatchdog();
+        }
+
+        function connectStream() {
             try { audio.pause(); } catch (e) {}
             audio.removeAttribute('src');
             try { audio.load(); } catch (e) {}
+            audio.src = streamUrl;
+            audio.load();
+            const attempt = audio.play();
+            if (attempt && typeof attempt.catch === 'function') {
+                attempt.catch(err => {
+                    if (err && err.name === 'AbortError') return; // cancelled by the user
+                    console.log('Playback error:', err);
+                    handleStreamFailure();
+                });
+            }
+        }
+
+        function disconnectStream() {
+            try { audio.pause(); } catch (e) {}
+            audio.removeAttribute('src');
+            try { audio.load(); } catch (e) {}
+        }
+
+        function stopPlayback() {
+            clearInterval(watchdogTimer);
+            watchdogTimer = null;
+            clearTimeout(autoRetryTimer);
+            autoRetryTimer = null;
+            disconnectStream();
             isPlaying = false;
             isConnecting = false;
+            reconnectAttempts = 0;
+            reconnecting = false;
             setPlayStatus(null);
             updateUI(false);
+        }
+
+        // Called on real errors AND when the watchdog detects a silent stall.
+        // Auto-reconnects up to MAX_ATTEMPTS, then shows the retry button and
+        // keeps auto-refreshing every AUTO_RETRY_MS so the player heals itself.
+        function handleStreamFailure() {
+            if (reconnecting) return; // already handling a failure
+            isConnecting = false;
+            isPlaying = false;
+            reconnectAttempts++;
+            if (reconnectAttempts >= MAX_ATTEMPTS) {
+                enterFailedState();
+                return;
+            }
+            reconnecting = true;
+            setPlayStatus('reconnecting');
+            disconnectStream();
+            setTimeout(() => {
+                reconnecting = false;
+                isConnecting = true;
+                lastProgress = Date.now(); // fresh clock for the new connection
+                connectStream();
+            }, 1200);
+        }
+
+        function enterFailedState() {
+            clearInterval(watchdogTimer);
+            watchdogTimer = null;
+            setPlayStatus('error');
+            updateUI(false);
+            // Auto-refresh after x minutes so the player recovers by itself
+            autoRetryTimer = setTimeout(() => {
+                if (!isPlaying && !isConnecting && !reconnecting) {
+                    startPlayback();
+                }
+            }, AUTO_RETRY_MS);
+        }
+
+        function retryPlayback() {
+            if (isPlaying || isConnecting) { stopPlayback(); return; }
+            startPlayback(); // manual retry resets the attempt counter
+        }
+
+        // Watchdog: if the stream stops making progress (no playing/timeupdate/
+        // progress events) for STALL_MS, tear the connection down and reconnect.
+        function armWatchdog() {
+            clearInterval(watchdogTimer);
+            watchdogTimer = null;
+            watchdogTimer = setInterval(() => {
+                if (!isPlaying && !isConnecting) return;
+                if (Date.now() - lastProgress > STALL_MS) {
+                    console.log('Stream stalled; reconnecting…');
+                    handleStreamFailure();
+                }
+            }, STALL_POLL_MS);
         }
 
         // Stream lifecycle -> tiny status message
         audio.addEventListener('playing', () => {
             isConnecting = false;
+            reconnecting = false;
             isPlaying = true;
+            reconnectAttempts = 0;
+            lastProgress = Date.now();
             setPlayStatus(null);
             updateUI(true);
         });
@@ -1068,14 +1193,27 @@
             if (isPlaying) setPlayStatus('loading');
         });
 
+        audio.addEventListener('timeupdate', () => {
+            if (isPlaying) lastProgress = Date.now();
+        });
+
+        audio.addEventListener('progress', () => {
+            lastProgress = Date.now();
+        });
+
+        audio.addEventListener('canplay', () => {
+            lastProgress = Date.now();
+        });
+
+        audio.addEventListener('ended', () => {
+            stopPlayback();
+        });
+
         audio.addEventListener('error', () => {
             // Ignore the intentional teardown when we clear the src
             if (!audio.currentSrc && !audio.getAttribute('src')) return;
-            isConnecting = false;
-            isPlaying = false;
-            setPlayStatus('error');
-            updateUI(false);
-            setTimeout(() => { if (!isPlaying) setPlayStatus(null); }, 3000);
+            if (reconnecting) return;
+            handleStreamFailure();
         });
 
         function updateUI(playing) {
