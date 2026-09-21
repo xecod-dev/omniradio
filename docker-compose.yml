@@ -13,6 +13,7 @@ services:
     volumes:
       - /home/saas/radio/audio:/app/audio
       - /home/saas/radio/config:/app/config
+      - /home/saas/radio/static:/app/static
     environment:
       - PORT=9000
       - AUDIO_DIR=/app/audio
