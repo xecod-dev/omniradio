@@ -666,10 +666,6 @@
             margin: 2px 0 4px;
             font-weight: 500;
             min-height: 40px;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
             transition: opacity 0.3s ease;
         }
 
@@ -750,13 +746,13 @@
             }
         }
 
-        /* Very short viewports: let the card scroll internally, never clip */
+        /* Very short viewports: let the card scroll internally, never clip.
+           The quote text is never clamped — it always shows in full. */
         @media (max-height: 620px) {
             .station-desc {
                 display: none;
             }
             .quote-text {
-                -webkit-line-clamp: 2;
                 min-height: 0;
             }
         }
