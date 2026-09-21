@@ -54,8 +54,17 @@ Experience it right now: **[https://radio.xecod.com](https://radio.xecod.com)** 
 | **Configuration** | `config/stations.json` (public-safe) + `config/secrets.json` (gitignored, volume-mounted) |
 | **Versioning** | `GET /api/version` — version, git commit SHA, updated date, station count, download URL |
 | **Health monitoring** | Docker `HEALTHCHECK` on `/healthz` every 15s |
-| **Resource footprint** | ~1 vCPU · 512 MB RAM recommended baseline (actual usage depends on concurrent listeners and active stations) |
+| **Resource footprint** | ~1 vCPU · 512 MB RAM baseline (guidance — actual usage depends on concurrent listeners and active stations) · runs comfortably on a Raspberry Pi 4, or a $5 VPS (Hetzner / DigitalOcean 1 vCPU) |
 | **Deployment** | Docker Engine 20+ with Docker Compose v2 · one command: `docker compose up -d --build` |
+
+### Hosting Options (free & low-cost)
+
+- **Free — forever:** Oracle Cloud Free Tier ("Always Free" Ampere A1 — 4 ARM cores / 24 GB RAM) is the realistic free-VPS choice: it runs 24/7 with a public IP and supports Docker. Ideal for the "one command" Docker install.
+- **Free — 12 months (then billed):** AWS Free Tier (`t2.micro`) or GCP Free Tier (`e2-micro`) — good for testing the project; note the trial ends after 12 months.
+- **Low cost (~$4–6/mo):** Hetzner CX22 or a DigitalOcean droplet (1 vCPU / 2 GB) comfortably runs all stations.
+- **On-prem / no monthly cost:** Raspberry Pi 4 (2 GB+) on the office or home network — perfect for the "open on employees' devices + save internet bandwidth" use case.
+- **Free HTTPS for any of the above:** Cloudflare Tunnel (free plan) or DuckDNS + nginx/Caddy — the repo already ships `scripts/duckdns_update.sh`.
+- **Not suitable:** serverless / free tiers that suspend or sleep (Render free, Fly.io dev limits, Railway trial credits) or Cloud Run's free quota — live streaming plus FTP passive ports need an always-on VM.
 
 ---
 
