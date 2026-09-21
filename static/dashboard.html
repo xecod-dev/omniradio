@@ -774,6 +774,23 @@
     <!-- Main Container -->
     <div class="container">
 
+        <!-- Islamic Spiritual Quote Card (Refreshes every 5 mins from Turso / Local SQLite) -->
+        <div class="quote-card" id="quoteCard">
+            <div class="quote-header">
+                <span class="quote-tag">✨ قبس إيماني وتذكرة</span>
+                <button class="quote-refresh-btn" id="quoteRefreshBtn" onclick="fetchNewQuote()" title="فائدة أخرى">🔄</button>
+            </div>
+            <div class="quote-body">
+                <span class="quote-mark" style="color: var(--accent); font-size: 20px;">❝</span>
+                <p class="quote-text" id="quoteText">من صَلُحَتْ صلاته صلح سائر عمله وفاز فوزا عظيما</p>
+                <span class="quote-mark" style="color: var(--accent); font-size: 20px; float: left;">❞</span>
+            </div>
+            <div class="quote-footer">
+                <span>يتجدد تلقائياً كل ٥ دقائق</span>
+                <span id="quoteTotalBadge" style="opacity: 0.7;">قاعدة المنهاج</span>
+            </div>
+        </div>
+
         <!-- Stats Bar -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -810,23 +827,6 @@
                     <div class="stat-value" style="font-size: 13px; color: var(--gold); font-family: monospace;">172.30.0.90:9000</div>
                 </div>
                 <div style="font-size: 22px;">🌐</div>
-            </div>
-        </div>
-
-        <!-- Islamic Spiritual Quote Card (Refreshes every 5 mins from Turso / Local SQLite) -->
-        <div class="quote-card" id="quoteCard">
-            <div class="quote-header">
-                <span class="quote-tag">✨ قبس إيماني وتذكرة</span>
-                <button class="quote-refresh-btn" id="quoteRefreshBtn" onclick="fetchNewQuote()" title="فائدة أخرى">🔄</button>
-            </div>
-            <div class="quote-body">
-                <span class="quote-mark" style="color: var(--accent); font-size: 20px;">❝</span>
-                <p class="quote-text" id="quoteText">من صَلُحَتْ صلاته صلح سائر عمله وفاز فوزا عظيما</p>
-                <span class="quote-mark" style="color: var(--accent); font-size: 20px; float: left;">❞</span>
-            </div>
-            <div class="quote-footer">
-                <span>يتجدد تلقائياً كل ٥ دقائق</span>
-                <span id="quoteTotalBadge" style="opacity: 0.7;">قاعدة المنهاج</span>
             </div>
         </div>
 
