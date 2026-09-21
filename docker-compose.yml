@@ -14,6 +14,7 @@ services:
       - /home/saas/radio/audio:/app/audio
       - /home/saas/radio/config:/app/config
       - /home/saas/radio/static:/app/static
+      - /home/saas/radio/data:/app/data
     environment:
       - PORT=9000
       - AUDIO_DIR=/app/audio

@@ -3,6 +3,7 @@ import time
 import socket
 import logging
 import hashlib
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
@@ -17,6 +18,7 @@ from .config import ConfigManager
 from .audio_manager import AudioManager
 from .engine import RadioEngine
 from .ftp_server import EmbeddedFTPServer
+from .quotes_manager import QuotesManager
 
 # Configure logging
 logging.basicConfig(
@@ -28,6 +30,7 @@ logger = logging.getLogger("radio.app")
 config_manager = ConfigManager()
 audio_manager = AudioManager()
 engine = RadioEngine(config_manager, audio_manager)
+quotes_manager = QuotesManager(os.getenv("QUOTES_DB_PATH", "/app/data/quotes.db"))
 
 # Server credentials & ports
 server_cfg = config_manager.get_server_config()
@@ -45,9 +48,11 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing OmniRadio Multi-Station Studio...")
     ftp_server.start()
     await engine.start()
+    quotes_task = asyncio.create_task(quotes_manager.start_daily_sync_worker())
     yield
     # Shutdown
     logger.info("Shutting down OmniRadio Studio...")
+    quotes_task.cancel()
     await engine.stop()
     ftp_server.stop()
 
@@ -311,6 +316,7 @@ async def stream_live(request: Request):
     if request.method == "HEAD":
         return Response(status_code=200, media_type="audio/mpeg", headers=headers)
 
+    quotes_manager.increment_listener("live")
     return StreamingResponse(
         _stream_generator(relay),
         media_type="audio/mpeg",
@@ -343,6 +349,7 @@ async def stream_station(station_id: str, request: Request):
     if request.method == "HEAD":
         return Response(status_code=200, media_type="audio/mpeg", headers=headers)
 
+    quotes_manager.increment_listener(station_id)
     return StreamingResponse(
         _stream_generator(relay),
         media_type="audio/mpeg",
@@ -400,7 +407,23 @@ async def serve_admin_portal():
 
 @app.get("/api/stations")
 async def api_get_stations():
-    return engine.get_all_stations_status()
+    stations = engine.get_all_stations_status()
+    for s in stations:
+        s["all_time_listeners"] = quotes_manager.get_all_time_listeners(s["id"])
+    return stations
+
+@app.get("/api/quotes/random")
+async def api_get_random_quote():
+    quote = quotes_manager.get_random_quote()
+    if not quote:
+        return {"id": 0, "content": "من صَلُحَتْ صلاته صلح سائر عمله وفاز فوزا عظيما", "total_quotes": 0}
+    return quote
+
+@app.post("/api/quotes/sync")
+async def api_sync_quotes(request: Request):
+    require_admin(request)
+    count = await quotes_manager.sync_from_turso()
+    return {"status": "synced", "count": count}
 
 class StationCreate(BaseModel):
     id: str
@@ -530,5 +553,7 @@ async def api_get_status(request: Request):
             "duckdns_live": f"http://{duckdns_domain}:9000/live"
         },
         "total_listeners": sum(r.listeners_count for r in engine.relays.values()),
+        "current_listeners": sum(r.listeners_count for r in engine.relays.values()),
+        "all_time_listeners": quotes_manager.get_all_time_listeners(),
         "total_stations": len(engine.relays)
     }

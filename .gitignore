@@ -23,6 +23,11 @@ audio/uploads/*
 !audio/uploads/.gitkeep
 !audio/standby_chime.mp3
 
+# Local persistent databases
+data/*.db
+data/*.sqlite*
+!data/.gitkeep
+
 # Migration archives
 omniradio_bundle_*.tar.gz
 *.tar.gz

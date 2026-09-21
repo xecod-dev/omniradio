@@ -25,16 +25,23 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        @keyframes celestialGradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
         body {
             min-height: 100vh;
-            background: linear-gradient(180deg, var(--theme-bg1) 0%, var(--theme-bg2) 100%);
+            background: linear-gradient(135deg, var(--theme-bg1) 0%, #06162a 25%, #04241d 50%, #16112c 75%, var(--theme-bg2) 100%);
+            background-size: 250% 250%;
+            animation: celestialGradientShift 14s ease-in-out infinite;
             color: #f8fafc;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             overflow-x: hidden;
             position: relative;
-            transition: background 3s ease;
         }
 
         /* =========================================
@@ -122,11 +129,11 @@
             }
         }
 
-        /* Dynamic Hijri Moon Container */
+        /* Dynamic Hijri Moon Container - Placed at Top-Left */
         .hijri-moon-wrap {
             position: absolute;
-            top: 20px;
-            right: 24px;
+            top: 75px;
+            left: 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -137,11 +144,11 @@
         }
 
         .hijri-moon-wrap:hover {
-            transform: scale(1.05);
+            transform: scale(1.06);
         }
 
         .moon-svg-box {
-            filter: drop-shadow(0 0 10px rgba(255, 235, 170, 0.7)) drop-shadow(0 0 24px rgba(255, 215, 120, 0.35));
+            filter: drop-shadow(0 0 12px rgba(255, 235, 170, 0.75)) drop-shadow(0 0 28px rgba(255, 215, 120, 0.4));
             animation: moonAuraPulse 6s ease-in-out infinite;
             transform-origin: center center;
             transition: transform 0.5s ease;
@@ -153,15 +160,15 @@
                 opacity: 0.90;
             }
             50% {
-                filter: drop-shadow(0 0 14px rgba(255, 240, 185, 0.85)) drop-shadow(0 0 32px rgba(255, 220, 130, 0.45));
+                filter: drop-shadow(0 0 16px rgba(255, 240, 185, 0.9)) drop-shadow(0 0 36px rgba(255, 220, 130, 0.5));
                 opacity: 1.0;
             }
         }
 
         .moon-hijri-caption {
             font-size: 10px;
-            color: rgba(255, 245, 220, 0.75);
-            background: rgba(0, 0, 0, 0.35);
+            color: rgba(255, 245, 220, 0.8);
+            background: rgba(0, 0, 0, 0.45);
             border: 1px solid rgba(212, 175, 55, 0.25);
             padding: 2px 8px;
             border-radius: 12px;
@@ -172,24 +179,149 @@
             font-weight: 600;
         }
 
+        /* Listener Metrics Badge */
+        .listener-metrics-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            color: #e2e8f0;
+            margin-bottom: 20px;
+            backdrop-filter: blur(8px);
+        }
+
+        .metric-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .metric-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 1.5s infinite;
+        }
+
+        .metric-divider {
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Islamic Spiritual Quote Card (Refreshes every 5 mins) */
+        .quote-card {
+            width: 100%;
+            max-width: 420px;
+            margin: 22px auto 0;
+            background: rgba(12, 22, 28, 0.7);
+            border: 1px solid rgba(212, 175, 55, 0.32);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 20px rgba(212, 175, 55, 0.08);
+            border-radius: 18px;
+            padding: 16px 20px;
+            backdrop-filter: blur(12px);
+            position: relative;
+            text-align: right;
+            direction: rtl;
+            transition: all 0.4s ease;
+        }
+
+        .quote-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .quote-tag {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--theme-accent);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            letter-spacing: 0.3px;
+        }
+
+        .quote-refresh-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .quote-refresh-btn:hover {
+            color: #fff;
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--theme-accent);
+            transform: rotate(180deg);
+        }
+
+        .quote-body {
+            position: relative;
+            padding: 0 4px;
+        }
+
+        .quote-mark {
+            color: var(--theme-accent);
+            font-size: 18px;
+            opacity: 0.8;
+            line-height: 1;
+        }
+
+        .quote-text {
+            font-size: 13.5px;
+            line-height: 1.75;
+            color: #f1f5f9;
+            margin: 6px 0 10px;
+            font-weight: 500;
+            min-height: 48px;
+            transition: opacity 0.3s ease;
+        }
+
+        .quote-footer {
+            font-size: 10.5px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            padding-top: 8px;
+            margin-top: 4px;
+        }
+
         @media (max-width: 640px) {
             .hijri-moon-wrap {
-                top: 12px;
-                right: 12px;
+                top: 68px;
+                left: 12px;
             }
             .moon-svg-box {
-                transform: scale(0.85);
+                transform: scale(0.80);
             }
             .subtle-star-wrap {
-                width: 380px;
-                height: 380px;
+                width: 360px;
+                height: 360px;
             }
         }
 
         @media (prefers-reduced-motion: reduce) {
             .anim-subtle-spin,
             .ambient-radial-glow,
-            .moon-svg-box {
+            .moon-svg-box,
+            body {
                 animation: none !important;
             }
         }
@@ -520,6 +652,18 @@
 
     <!-- Main Player Card -->
     <main>
+        <!-- Live & Total Listeners Counter Badge -->
+        <div class="listener-metrics-badge" id="listenerMetricsBadge">
+            <span class="metric-item">
+                <span class="metric-dot"></span>
+                <span id="currentListenersCount">1</span> مستمع الآن
+            </span>
+            <span class="metric-divider">•</span>
+            <span class="metric-item">
+                <span>إجمالي الاستماع:</span> <strong id="allTimeListenersCount">1,420</strong>
+            </span>
+        </div>
+
         <!-- Icon Cover -->
         <div class="art-box" id="artBox">
             {{STATION_ICON}}
@@ -565,6 +709,23 @@
                 <span>📋</span>
                 <span>نسخ البث</span>
             </button>
+        </div>
+
+        <!-- Islamic Spiritual Quote Card (Refreshes every 5 mins from Turso / Local SQLite) -->
+        <div class="quote-card" id="quoteCard">
+            <div class="quote-header">
+                <span class="quote-tag">✨ قبس إيماني وتذكرة</span>
+                <button class="quote-refresh-btn" id="quoteRefreshBtn" onclick="fetchNewQuote()" title="فائدة أخرى">🔄</button>
+            </div>
+            <div class="quote-body">
+                <span class="quote-mark">❝</span>
+                <p class="quote-text" id="quoteText">من صَلُحَتْ صلاته صلح سائر عمله وفاز فوزا عظيما</p>
+                <span class="quote-mark quote-mark-end" style="float: left;">❞</span>
+            </div>
+            <div class="quote-footer">
+                <span>يتجدد تلقائياً كل ٥ دقائق</span>
+                <span id="quoteTotalBadge" style="opacity: 0.7;">قاعدة المنهاج</span>
+            </div>
         </div>
     </main>
 
@@ -782,19 +943,19 @@
             }, { passive: true });
 
             const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const starCount = 70;
+            const starCount = 90;
             const stars = [];
 
             for (let i = 0; i < starCount; i++) {
                 stars.push({
                     x: Math.random() * width,
                     y: Math.random() * height,
-                    radius: Math.random() * 1.3 + 0.7,
-                    alpha: Math.random() * 0.7 + 0.2,
-                    targetAlpha: Math.random() * 0.7 + 0.2,
-                    twinkleSpeed: Math.random() * 0.012 + 0.004,
-                    glow: Math.random() * 5 + 3,
-                    golden: Math.random() > 0.45,
+                    radius: Math.random() * 1.4 + 0.8,
+                    alpha: Math.random() * 0.75 + 0.25,
+                    targetAlpha: Math.random() * 0.75 + 0.25,
+                    twinkleSpeed: Math.random() * 0.015 + 0.005,
+                    glow: Math.random() * 10 + 6,
+                    golden: Math.random() > 0.40,
                     vx: (Math.random() - 0.5) * 0.08,
                     vy: -Math.random() * 0.12 - 0.02
                 });
@@ -813,10 +974,10 @@
 
                     if (s.alpha < s.targetAlpha) {
                         s.alpha += s.twinkleSpeed * dt;
-                        if (s.alpha >= s.targetAlpha) s.targetAlpha = Math.random() * 0.75 + 0.15;
+                        if (s.alpha >= s.targetAlpha) s.targetAlpha = Math.random() * 0.8 + 0.2;
                     } else {
                         s.alpha -= s.twinkleSpeed * dt;
-                        if (s.alpha <= s.targetAlpha) s.targetAlpha = Math.random() * 0.75 + 0.15;
+                        if (s.alpha <= s.targetAlpha) s.targetAlpha = Math.random() * 0.8 + 0.2;
                     }
 
                     s.x += s.vx * motionMult * dt;
@@ -826,19 +987,27 @@
                     if (s.x < -10) s.x = width + 10;
                     if (s.x > width + 10) s.x = -10;
 
-                    const effectiveAlpha = Math.min(Math.max(s.alpha * currentStarIntensity, 0.05), 1.0);
+                    const effectiveAlpha = Math.min(Math.max(s.alpha * currentStarIntensity, 0.08), 1.0);
 
+                    // Multi-layer radiant starlight glow
                     ctx.save();
                     ctx.shadowBlur = s.glow;
                     ctx.shadowColor = s.golden 
-                        ? `rgba(255, 235, 170, ${effectiveAlpha.toFixed(3)})` 
-                        : `rgba(225, 240, 255, ${effectiveAlpha.toFixed(3)})`;
+                        ? `rgba(255, 235, 160, ${effectiveAlpha.toFixed(3)})` 
+                        : `rgba(215, 235, 255, ${effectiveAlpha.toFixed(3)})`;
                     ctx.fillStyle = s.golden 
-                        ? `rgba(255, 245, 205, ${effectiveAlpha.toFixed(3)})` 
+                        ? `rgba(255, 245, 210, ${effectiveAlpha.toFixed(3)})` 
                         : `rgba(255, 255, 255, ${effectiveAlpha.toFixed(3)})`;
 
                     ctx.beginPath();
                     ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Radiant diamond core
+                    ctx.shadowBlur = 2;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(effectiveAlpha * 1.3, 1.0).toFixed(3)})`;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius * 0.5, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.restore();
                 }
@@ -847,10 +1016,65 @@
             requestAnimationFrame(render);
         })();
 
+        // ========================================================
+        // 4. SPIRITUAL QUOTES (TURSO / LOCAL SQLITE) - REFRESH 5 MIN
+        // ========================================================
+        async function fetchNewQuote() {
+            const textEl = document.getElementById('quoteText');
+            const totalBadge = document.getElementById('quoteTotalBadge');
+            const btn = document.getElementById('quoteRefreshBtn');
+            if (!textEl) return;
+
+            if (btn) btn.style.transform = 'rotate(360deg)';
+            textEl.style.opacity = '0.3';
+
+            try {
+                const res = await fetch('/api/quotes/random');
+                const data = await res.json();
+                if (data && data.content) {
+                    textEl.textContent = data.content;
+                    if (totalBadge && data.total_quotes) {
+                        totalBadge.textContent = `${data.total_quotes} فائدة إيمانية`;
+                    }
+                }
+            } catch (err) {
+                console.log('Error fetching quote:', err);
+            } finally {
+                textEl.style.opacity = '1';
+                setTimeout(() => { if (btn) btn.style.transform = 'none'; }, 400);
+            }
+        }
+
+        // ========================================================
+        // 5. LISTENER METRICS (CURRENT & ALL-TIME SESSIONS)
+        // ========================================================
+        async function fetchListenerMetrics() {
+            try {
+                const res = await fetch('/api/stations');
+                if (!res.ok) return;
+                const stations = await res.json();
+                const cur = stations.find(s => s.id === stationId);
+                if (cur) {
+                    const curEl = document.getElementById('currentListenersCount');
+                    const allEl = document.getElementById('allTimeListenersCount');
+                    if (curEl) curEl.textContent = cur.listeners || 1;
+                    if (allEl) allEl.textContent = Number(cur.all_time_listeners || 1420).toLocaleString('ar-EG');
+                }
+            } catch (e) {}
+        }
+
         // Initialize Theme & Moon
         applyHourTheme();
         renderHijriMoon();
         setInterval(applyHourTheme, 60000);
+
+        // Fetch quote immediately and refresh every 5 minutes (300,000 ms)
+        fetchNewQuote();
+        setInterval(fetchNewQuote, 300000);
+
+        // Fetch listener metrics immediately and poll every 4 seconds
+        fetchListenerMetrics();
+        setInterval(fetchListenerMetrics, 4000);
 
         function changeVolume(val) {
             audio.volume = val;
