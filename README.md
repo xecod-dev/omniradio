@@ -37,6 +37,28 @@ Experience it right now: **[https://radio.xecod.com](https://radio.xecod.com)** 
 
 ---
 
+## 📊 Technical Specifications
+
+| Area | Specification |
+|---|---|
+| **Runtime** | Python 3 on Alpine Linux, FastAPI + Uvicorn (single lightweight container) |
+| **Audio engine** | FFmpeg multi-source relay with automatic failover on stall > 4s + auto-recovery of the primary source |
+| **Stream output** | 128 kbps MP3 · 44.1 kHz · stereo, with ICY metadata headers |
+| **Supported sources** | HLS (`m3u8`), AAC, HTTP(S) streams, and local MP3 files/folders (per station, in priority order) |
+| **HTTP port** | `9000` — REST API (`/api/status`, `/api/version`, `/api/stations`), themed player pages (`/listen/<id>`), master playlist (`/playlist.m3u`), health check (`/healthz`) |
+| **FTP port** | `2121` (pyftpdlib) · passive ports `2122–2125` |
+| **Media upload** | Web drag-and-drop `.zip` with auto-extraction into category folders + full FTP file management |
+| **Frontend** | 100% self-contained — inline CSS + vanilla JavaScript, zero CDN dependencies, loads in under 40ms |
+| **Player compatibility** | Windows Media Player, VLC, Winamp, iOS Safari, Android browsers |
+| **Admin security** | Management actions locked behind password auth (`/admin`); credentials stored in gitignored `config/secrets.json` |
+| **Configuration** | `config/stations.json` (public-safe) + `config/secrets.json` (gitignored, volume-mounted) |
+| **Versioning** | `GET /api/version` — version, git commit SHA, updated date, station count, download URL |
+| **Health monitoring** | Docker `HEALTHCHECK` on `/healthz` every 15s |
+| **Resource footprint** | ~1 vCPU · 512 MB RAM recommended baseline (actual usage depends on concurrent listeners and active stations) |
+| **Deployment** | Docker Engine 20+ with Docker Compose v2 · one command: `docker compose up -d --build` |
+
+---
+
 ## 🚀 Quick Start (Docker)
 
 ### 1. Clone & Launch
