@@ -575,11 +575,11 @@
             <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
                 Connect via FileZilla, WinSCP, or Windows Explorer to drag and drop MP3 albums directly onto your radio server.
             </p>
-            <div class="code-box">
-                Host: <strong>172.30.0.90</strong> (LAN) / <strong>100.64.1.90</strong> (Tailscale)<br>
-                Port: <strong>2121</strong><br>
-                User: <strong>radio</strong><br>
-                Password: <strong>RadioMaster2026!</strong><br>
+            <div class="code-box" id="ftpCodeBox">
+                Host: <strong id="ftpHostText">172.30.0.90 (LAN) / 100.64.1.90 (Tailscale)</strong><br>
+                Port: <strong id="ftpPortText">2121</strong><br>
+                User: <strong id="ftpUserText">radio</strong><br>
+                Password: <strong id="ftpPassText">••••••••</strong><br>
                 Storage: <strong>/app/audio/</strong> (quran, ambient, uploads)
             </div>
             <div style="margin-top: 14px; text-align: right;">
@@ -648,8 +648,18 @@
         let activePlayingId = null;
         let isAdmin = false;
 
-        function openModal(id) {
+        async function openModal(id) {
             document.getElementById(id).classList.add('show');
+            if (id === 'ftpModal') {
+                try {
+                    let res = await fetch('/api/status');
+                    let data = await res.json();
+                    if (data.ftp && data.ftp.password) {
+                        document.getElementById('ftpUserText').textContent = data.ftp.user;
+                        document.getElementById('ftpPassText').textContent = data.ftp.password;
+                    }
+                } catch (e) {}
+            }
         }
 
         function closeModal(id) {
