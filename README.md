@@ -9,6 +9,12 @@
 
 ![OmniRadio Preview](https://i.ibb.co/1tRy8RM2/2026-09-21-21-16-51-Termius-odoo-saas.png "OmniRadio on the XE platform")
 
+## 🎙️ Live Demo
+
+Experience it right now: **[https://radio.xecod.com](https://radio.xecod.com)** — open it on any phone or desktop; the stream auto-plays.
+
+*(Mirror: https://radio.serastores.com)*
+
 ---
 
 ## 🌟 Key Features
