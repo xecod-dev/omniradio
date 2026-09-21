@@ -183,6 +183,58 @@
             font-weight: 600;
         }
 
+        /* Dynamic Sun - position & color follow the time of day */
+        .sun-wrap {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 2s ease, left 1.5s ease-out, top 1.5s ease-out;
+            will-change: left, top, opacity;
+        }
+
+        .sun-halo {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--sun-glow, rgba(255, 190, 90, 0.35)) 0%, transparent 62%);
+            animation: sunPulse 7s ease-in-out infinite;
+        }
+
+        .sun-core {
+            position: absolute;
+            inset: 24%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 38% 34%, #fff8e1 0%, var(--sun-color, #ffd54f) 48%, rgba(255, 170, 60, 0) 78%);
+            box-shadow: 0 0 34px 10px var(--sun-glow, rgba(255, 190, 90, 0.35));
+            transition: background 1.2s ease, box-shadow 1.2s ease;
+        }
+
+        .sun-caption {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 4px;
+            font-size: 9px;
+            color: rgba(255, 245, 220, 0.8);
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            padding: 2px 7px;
+            border-radius: 10px;
+            white-space: nowrap;
+            backdrop-filter: blur(6px);
+            font-weight: 600;
+        }
+
+        @keyframes sunPulse {
+            0%, 100% { opacity: 0.75; transform: scale(0.97); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
         /* =========================================
            Compact Navigation Header
            ========================================= */
@@ -761,6 +813,7 @@
             .anim-subtle-spin,
             .ambient-radial-glow,
             .moon-svg-box,
+            .sun-halo,
             body {
                 animation: none !important;
             }
@@ -799,6 +852,13 @@
         <div class="hijri-moon-wrap" id="hijriMoonWrap" title="مرحلة القمر لليوم الهجري">
             <div class="moon-svg-box" id="moonSvgBox"></div>
             <div class="moon-hijri-caption" id="moonHijriCaption">...</div>
+        </div>
+
+        <!-- Dynamic Sun (position & color follow the time of day) -->
+        <div class="sun-wrap" id="sunWrap" title="موقع الشمس حسب الوقت">
+            <div class="sun-halo" id="sunHalo"></div>
+            <div class="sun-core" id="sunCore"></div>
+            <div class="sun-caption" id="sunCaption">...</div>
         </div>
     </div>
 
@@ -1308,10 +1368,68 @@
             } catch (e) {}
         }
 
-        // Initialize Theme & Moon
+        // ========================================================
+        // 6. DYNAMIC SUN (POSITION & COLOR FOLLOW THE TIME OF DAY)
+        // ========================================================
+        function getSunState(hour) {
+            // Simple sun-arc model: rises ~05:30, sets ~18:30
+            const sunrise = 5.5;
+            const sunset = 18.5;
+            if (hour < sunrise || hour > sunset) {
+                return { visible: false, t: 0, elevation: -1, azimuth: 0 };
+            }
+            const t = Math.min(Math.max((hour - sunrise) / (sunset - sunrise), 0), 1);
+            const elevation = Math.sin(Math.PI * t); // 0 at horizon, 1 at midday
+            return { visible: true, t, elevation, azimuth: t };
+        }
+
+        function getSunColors(t) {
+            // t = 0 (dawn) -> 1 (dusk): warm sunrise -> bright noon -> deep sunset
+            if (t < 0.16) return { core: "#ff9350", glow: "rgba(255, 140, 70, 0.45)" };
+            if (t < 0.38) return { core: "#ffd54f", glow: "rgba(255, 205, 90, 0.42)" };
+            if (t < 0.62) return { core: "#fff176", glow: "rgba(255, 235, 130, 0.45)" };
+            if (t < 0.85) return { core: "#ffc94d", glow: "rgba(255, 200, 90, 0.42)" };
+            return { core: "#ff7043", glow: "rgba(255, 110, 70, 0.45)" };
+        }
+
+        function getSunPeriodName(hour) {
+            if (hour < 6.5) return "فجر";
+            if (hour < 11.5) return "ضحى";
+            if (hour < 15.5) return "ظهيرة";
+            if (hour < 18.5) return "عصر";
+            if (hour < 19.5) return "مغرب";
+            return "عشاء";
+        }
+
+        function renderSun() {
+            const wrap = document.getElementById('sunWrap');
+            if (!wrap) return;
+            const now = new Date();
+            const hour = now.getHours() + now.getMinutes() / 60;
+            const sun = getSunState(hour);
+
+            if (!sun.visible) {
+                wrap.style.opacity = '0';
+                return;
+            }
+
+            const colors = getSunColors(sun.t);
+            wrap.style.setProperty('--sun-color', colors.core);
+            wrap.style.setProperty('--sun-glow', colors.glow);
+            wrap.style.left = (6 + sun.azimuth * 88) + '%';   // east edge -> west edge
+            wrap.style.top = (70 - sun.elevation * 54) + '%'; // horizon -> upper sky
+            wrap.style.opacity = '1';
+
+            const caption = document.getElementById('sunCaption');
+            if (caption) caption.textContent = 'الشمس • ' + getSunPeriodName(hour);
+        }
+
+        // Initialize Theme, Moon & Sun
         applyHourTheme();
         renderHijriMoon();
+        renderSun();
         setInterval(applyHourTheme, 60000);
+        setInterval(renderSun, 60000);
 
         // Fetch quote immediately and refresh every 5 minutes (300,000 ms)
         fetchNewQuote();
