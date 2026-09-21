@@ -5,6 +5,12 @@
 
 ---
 
+## 📸 Preview
+
+![OmniRadio Preview](https://i.ibb.co/1tRy8RM2/2026-09-21-21-16-51-Termius-odoo-saas.png "OmniRadio on the XE platform")
+
+---
+
 ## 🌟 Key Features
 
 * **Multi-Source Redundancy & Auto-Failover**:
