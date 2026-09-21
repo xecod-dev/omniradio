@@ -7,25 +7,31 @@ from typing import List, Dict, Any, Optional
 logger = logging.getLogger("radio.config")
 
 CONFIG_FILE = os.getenv("CONFIG_FILE", "/app/config/stations.json")
+SECRETS_FILE = os.getenv("SECRETS_FILE", "/app/config/secrets.json")
 DEFAULT_AUDIO_DIR = os.getenv("AUDIO_DIR", "/app/audio")
+
+# Keys considered credentials when overlaying secrets.json over the server config
+SECRET_KEYS = ("admin_password", "ftp_user", "ftp_password")
 
 DEFAULT_CONFIG = {
     "server": {
         "name": "OmniRadio Multi-Station Studio",
         "port": 9000,
-        "admin_password": "RadioMaster2026!",
+        "admin_password": "",
         "ftp_port": 2121,
         "ftp_pasv_ports": [2122, 2123, 2124, 2125],
         "ftp_user": "radio",
-        "ftp_password": "RadioMaster2026!"
+        "ftp_password": ""
     },
     "stations": []
 }
 
 class ConfigManager:
-    def __init__(self, config_path: str = CONFIG_FILE):
+    def __init__(self, config_path: str = CONFIG_FILE, secrets_path: str = SECRETS_FILE):
         self.config_path = Path(config_path)
+        self.secrets_path = Path(secrets_path)
         self.data = self.load()
+        self._merge_secrets()
 
     def load(self) -> Dict[str, Any]:
         if self.config_path.exists():
@@ -35,6 +41,32 @@ class ConfigManager:
             except Exception as e:
                 logger.error(f"Failed to parse config file {self.config_path}: {e}")
         return DEFAULT_CONFIG.copy()
+
+    def _merge_secrets(self) -> None:
+        """Overlay credentials from the gitignored secrets file onto the server config.
+
+        stations.json stays public; real admin/FTP credentials live in
+        config/secrets.json (volume-mounted, not tracked by git).
+        Falls back to stations.json server keys when the secrets file is absent.
+        """
+        if not self.secrets_path.exists():
+            logger.warning(
+                f"Secrets file {self.secrets_path} not found — using credentials "
+                "from stations.json / defaults. Create config/secrets.json to "
+                "keep credentials out of git."
+            )
+            return
+        try:
+            with open(self.secrets_path, "r", encoding="utf-8") as f:
+                secrets = json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to parse secrets file {self.secrets_path}: {e}")
+            return
+        self.data.setdefault("server", {})
+        for key in SECRET_KEYS:
+            if key in secrets and secrets[key]:
+                self.data["server"][key] = secrets[key]
+        logger.info(f"Credentials loaded from {self.secrets_path}")
 
     def save(self):
         try:
@@ -49,7 +81,7 @@ class ConfigManager:
         return self.data.get("server", DEFAULT_CONFIG["server"])
 
     def get_admin_password(self) -> str:
-        return self.get_server_config().get("admin_password", "RadioMaster2026!")
+        return self.get_server_config().get("admin_password", "")
 
     def get_stations(self) -> List[Dict[str, Any]]:
         return self.data.get("stations", [])

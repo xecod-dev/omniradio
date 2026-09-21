@@ -40,7 +40,7 @@ ftp_server = EmbeddedFTPServer(
     port=server_cfg.get("ftp_port", 2121),
     pasv_ports=server_cfg.get("ftp_pasv_ports", [2122, 2123, 2124, 2125]),
     user=server_cfg.get("ftp_user", "radio"),
-    password=server_cfg.get("ftp_password", "RadioMaster2026!")
+    password=server_cfg.get("ftp_password", "")
 )
 
 @asynccontextmanager
@@ -539,10 +539,10 @@ async def api_get_status(request: Request):
             "duckdns_host": duckdns_domain,
             "port": server_cfg.get("ftp_port", 2121),
             "user": server_cfg.get("ftp_user", "radio"),
-            "password": server_cfg.get("ftp_password", "RadioMaster2026!"),
-            "url_lan": f"ftp://{server_cfg.get('ftp_user', 'radio')}:{server_cfg.get('ftp_password', 'RadioMaster2026!')}@{lan_ip}:{server_cfg.get('ftp_port', 2121)}",
-            "url_tailscale": f"ftp://{server_cfg.get('ftp_user', 'radio')}:{server_cfg.get('ftp_password', 'RadioMaster2026!')}@{tailscale_ip}:{server_cfg.get('ftp_port', 2121)}",
-            "url_duckdns": f"ftp://{server_cfg.get('ftp_user', 'radio')}:{server_cfg.get('ftp_password', 'RadioMaster2026!')}@{duckdns_domain}:{server_cfg.get('ftp_port', 2121)}"
+            "password": server_cfg.get("ftp_password", ""),
+            "url_lan": f"ftp://{server_cfg.get('ftp_user', 'radio')}:{server_cfg.get('ftp_password', '')}@{lan_ip}:{server_cfg.get('ftp_port', 2121)}",
+            "url_tailscale": f"ftp://{server_cfg.get('ftp_user', 'radio')}:{server_cfg.get('ftp_password', '')}@{tailscale_ip}:{server_cfg.get('ftp_port', 2121)}",
+            "url_duckdns": f"ftp://{server_cfg.get('ftp_user', 'radio')}:{server_cfg.get('ftp_password', '')}@{duckdns_domain}:{server_cfg.get('ftp_port', 2121)}"
         }
 
     return {

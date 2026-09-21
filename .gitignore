@@ -9,6 +9,7 @@ scripts/duckdns.conf
 *.env
 *.log
 scripts/*.log
+config/secrets.json
 
 # Audio files (preserve directory structure with .gitkeep)
 audio/*

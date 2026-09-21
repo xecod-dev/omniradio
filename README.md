@@ -38,7 +38,7 @@ docker compose up -d --build
 * **Studio Dashboard**: `http://localhost:9000/`
 * **Dedicated Quran Player**: `http://localhost:9000/quran`
 * **Master Playlist (Windows Media Player / VLC)**: `http://localhost:9000/playlist.m3u`
-* **Embedded FTP Server**: `ftp://radio:RadioMaster2026!@localhost:2121`
+* **Embedded FTP Server**: `ftp://radio:<your-ftp-password>@localhost:2121` (credentials come from `config/secrets.json`, which is gitignored — copy `config/secrets.example.json` and fill it in)
 
 ---
 

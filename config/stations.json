@@ -2,11 +2,11 @@
   "server": {
     "name": "OmniRadio Islamic Studio",
     "port": 9000,
-    "admin_password": "RadioMaster2026!",
+    "admin_password": "",
     "ftp_port": 2121,
     "ftp_pasv_ports": [2122, 2123, 2124, 2125],
-    "ftp_user": "radio",
-    "ftp_password": "RadioMaster2026!"
+    "ftp_user": "",
+    "ftp_password": ""
   },
   "stations": [
     {

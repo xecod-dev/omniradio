@@ -9,7 +9,7 @@ from pyftpdlib.servers import FTPServer
 logger = logging.getLogger("radio.ftp")
 
 class EmbeddedFTPServer:
-    def __init__(self, audio_dir: str = "/app/audio", port: int = 2121, pasv_ports: list = None, user: str = "radio", password: str = "RadioMaster2026!"):
+    def __init__(self, audio_dir: str = "/app/audio", port: int = 2121, pasv_ports: list = None, user: str = "radio", password: str = ""):
         self.audio_dir = Path(audio_dir)
         self.audio_dir.mkdir(parents=True, exist_ok=True)
         self.port = port
