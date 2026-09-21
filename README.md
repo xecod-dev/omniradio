@@ -15,6 +15,8 @@ Experience it right now: **[https://radio.xecod.com](https://radio.xecod.com)** 
 
 *(Mirror: https://radio.serastores.com)*
 
+**Directory publishing:** stations can be listed individually in the public [radio-browser.info](https://www.radio-browser.info) directory — run `scripts/radio_browser_sync.py` (idempotent, cron-friendly; auto-registers any new station added to `config/stations.json`).
+
 ---
 
 ## 🌟 Key Features

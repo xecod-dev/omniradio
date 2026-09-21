@@ -38,3 +38,6 @@ omniradio_bundle_*.tar.gz
 .DS_Store
 .vscode/
 .idea/
+
+# radio-browser sync log
+scripts/radio_browser_sync.log
