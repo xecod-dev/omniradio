@@ -1,0 +1,84 @@
+{
+  "server": {
+    "name": "OmniRadio Multi-Station Studio",
+    "port": 9000,
+    "admin_password": "RadioMaster2026!",
+    "ftp_port": 2121,
+    "ftp_pasv_ports": [2122, 2123, 2124, 2125],
+    "ftp_user": "radio",
+    "ftp_password": "RadioMaster2026!"
+  },
+  "stations": [
+    {
+      "id": "quran-cairo",
+      "name": "إذاعة القرآن الكريم (بث مباشر)",
+      "name_en": "Holy Quran Radio (Live Stream)",
+      "category": "Quran & Islamic",
+      "description": "بث إذاعي مباشر عالي الجودة على مدار الساعة",
+      "icon": "🕌",
+      "sources": [
+        "https://stream.radiojar.com/8s5u5tpdtwzuv",
+        "http://live.mp3quran.net:8006/;",
+        "http://qurango.net/radio/salma",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
+      "id": "quran-recitations",
+      "name": "تلاوات مختارة للقرآن الكريم",
+      "name_en": "Selected Quran Recitations",
+      "category": "Quran & Islamic",
+      "description": "Continuous high quality Quran recitations stream",
+      "icon": "📖",
+      "sources": [
+        "http://live.mp3quran.net:8006/;",
+        "http://qurango.net/radio/salma",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
+      "id": "somafm-groove",
+      "name": "SomaFM - Groove Salad",
+      "name_en": "SomaFM - Groove Salad (Chillout)",
+      "category": "Chill / Ambient",
+      "description": "Downtempo, chillout ambient beats",
+      "icon": "🌿",
+      "sources": [
+        "https://ice1.somafm.com/groovesalad-128-mp3",
+        "https://ice2.somafm.com/groovesalad-128-mp3",
+        "https://ice4.somafm.com/groovesalad-128-mp3",
+        "local:/app/audio/ambient"
+      ],
+      "bitrate": 128
+    },
+    {
+      "id": "radio-paradise",
+      "name": "Radio Paradise",
+      "name_en": "Radio Paradise (Main Mix)",
+      "category": "World & Rock",
+      "description": "Eclectic blend of song-oriented modern & classic rock, world, electronica",
+      "icon": "🌴",
+      "sources": [
+        "https://stream.radioparadise.com/mp3-128",
+        "local:/app/audio/ambient"
+      ],
+      "bitrate": 128
+    },
+    {
+      "id": "local-jukebox",
+      "name": "محطة الملفات المرفوعة (Local MP3)",
+      "name_en": "Local Uploaded MP3 Jukebox",
+      "category": "Local Jukebox",
+      "description": "Plays custom uploaded MP3 files from Web Upload or FTP folder",
+      "icon": "📁",
+      "sources": [
+        "local:/app/audio/uploads",
+        "local:/app/audio/quran",
+        "local:/app/audio/ambient"
+      ],
+      "bitrate": 128
+    }
+  ]
+}

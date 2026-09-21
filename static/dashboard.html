@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniRadio Studio • بث مباشر</title>
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --bg-card: #151d30;
+            --bg-hover: #1e2942;
+            --border: #23314f;
+            --accent: #00d2ff;
+            --accent-glow: rgba(0, 210, 255, 0.25);
+            --gold: #f59e0b;
+            --green: #10b981;
+            --red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Cairo", sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding-bottom: 120px;
+        }
+
+        /* Top Header */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            font-size: 26px;
+        }
+
+        .brand-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            font-size: 10px;
+            padding: 2px 7px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-cyan {
+            background: rgba(0, 210, 255, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+        }
+
+        .badge-green {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-gold {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--gold);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #2b395b;
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            background: #0284c7;
+            border-color: #0284c7;
+        }
+        .btn-primary:hover {
+            background: #0369a1;
+        }
+
+        .btn-success {
+            background: #059669;
+            border-color: #059669;
+        }
+        .btn-success:hover {
+            background: #047857;
+        }
+
+        /* Container & Grid */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 16px;
+        }
+
+        /* Stats Bar */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        /* Stations Grid */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .station-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+
+        .station-card:hover {
+            border-color: rgba(0, 210, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .station-card.active-playing {
+            border-color: var(--accent);
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .station-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .station-icon {
+            font-size: 28px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .station-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .station-category {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .source-stack {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 11px;
+        }
+
+        .source-header {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 6px;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .source-item.active {
+            background: rgba(0, 210, 255, 0.12);
+            border-left: 2px solid var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .source-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 200px;
+            font-family: monospace;
+        }
+
+        .card-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+
+        .card-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-play {
+            background: var(--accent);
+            color: #000;
+            font-weight: 700;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.2s ease;
+        }
+
+        .btn-play:hover {
+            opacity: 0.9;
+        }
+
+        /* Fixed Bottom Audio Player */
+        .bottom-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #111827;
+            border-top: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            z-index: 100;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        }
+
+        .player-station-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 180px;
+        }
+
+        .player-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .player-status {
+            font-size: 11px;
+            color: var(--accent);
+            font-family: monospace;
+        }
+
+        .player-controls {
+            flex: 1;
+            max-width: 600px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        audio {
+            width: 100%;
+            height: 36px;
+            accent-color: var(--accent);
+        }
+
+        /* Modals */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 16px;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        .code-box {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--accent);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 10px 14px;
+            }
+            .brand-title {
+                font-size: 15px;
+            }
+            .header-actions .btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+            .bottom-player {
+                flex-direction: column;
+                padding: 10px 14px;
+                gap: 8px;
+            }
+            .player-controls {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <span class="brand-icon">📻</span>
+            <div>
+                <div class="brand-title">
+                    OmniRadio Studio
+                    <span class="badge badge-cyan">Live</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button id="ftpHeaderBtn" onclick="openModal('ftpModal')" class="btn" style="display: none;">📂 FTP</button>
+            <button id="uploadHeaderBtn" onclick="openModal('uploadModal')" class="btn btn-primary" style="display: none;">📤 Upload ZIP</button>
+            <a href="/playlist.m3u" class="btn btn-success" download>📥 Master .M3U</a>
+            <button id="adminHeaderBtn" onclick="handleAdminHeaderAction()" class="btn">🔐 Admin</button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+
+        <!-- Stats Bar -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div>
+                    <div class="stat-label">Active Stations</div>
+                    <div class="stat-value" id="statStations">5</div>
+                </div>
+                <div style="font-size: 22px;">📡</div>
+            </div>
+            <div class="stat-card">
+                <div>
+                    <div class="stat-label">Total Listeners</div>
+                    <div class="stat-value" id="statListeners" style="color: var(--green);">0</div>
+                </div>
+                <div style="font-size: 22px;">🎧</div>
+            </div>
+            <div class="stat-card">
+                <div>
+                    <div class="stat-label">Global HTTPS Address</div>
+                    <div class="stat-value" style="font-size: 13px; color: var(--accent); font-family: monospace;">radio.serastores.com</div>
+                </div>
+                <div style="font-size: 22px;">🔒</div>
+            </div>
+            <div class="stat-card">
+                <div>
+                    <div class="stat-label">Local LAN Streaming</div>
+                    <div class="stat-value" style="font-size: 13px; color: var(--gold); font-family: monospace;">172.30.0.90:9000</div>
+                </div>
+                <div style="font-size: 22px;">🌐</div>
+            </div>
+        </div>
+
+        <!-- Stations Grid -->
+        <div class="section-header">
+            <div class="section-title">⚡ Live Radio Stations • محطات البث المباشر</div>
+        </div>
+
+        <div class="stations-grid" id="stationsGrid">
+            <!-- Dynamic Station Cards injected here -->
+        </div>
+
+        <!-- Footer -->
+        <footer style="text-align: center; padding: 32px 16px 40px; font-size: 13px; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 40px;">
+            Designed and developed by <a href="https://xecod.com" target="_blank" style="color: var(--accent); font-weight: 700; text-decoration: none;">xecod.com</a>
+        </footer>
+
+    </div>
+
+    <!-- Fixed Bottom Audio Player -->
+    <div class="bottom-player">
+        <div class="player-station-info">
+            <span id="playerIcon" style="font-size: 24px;">📻</span>
+            <div>
+                <div class="player-title" id="playerTitle">Select a station to play</div>
+                <div class="player-status" id="playerStatus">Ready • 128kbps MP3</div>
+            </div>
+        </div>
+        <div class="player-controls">
+            <audio id="audioElement" controls autoplay></audio>
+        </div>
+    </div>
+
+    <!-- FTP Modal -->
+    <div id="ftpModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">📂 FTP Audio Storage Server</div>
+                <button class="modal-close" onclick="closeModal('ftpModal')">&times;</button>
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                Connect via FileZilla, WinSCP, or Windows Explorer to drag and drop MP3 albums directly onto your radio server.
+            </p>
+            <div class="code-box">
+                Host: <strong>172.30.0.90</strong> (LAN) / <strong>100.64.1.90</strong> (Tailscale)<br>
+                Port: <strong>2121</strong><br>
+                User: <strong>radio</strong><br>
+                Password: <strong>RadioMaster2026!</strong><br>
+                Storage: <strong>/app/audio/</strong> (quran, ambient, uploads)
+            </div>
+            <div style="margin-top: 14px; text-align: right;">
+                <button class="btn" onclick="closeModal('ftpModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ZIP Upload Modal -->
+    <div id="uploadModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">📤 Upload ZIP Archive or MP3</div>
+                <button class="modal-close" onclick="closeModal('uploadModal')">&times;</button>
+            </div>
+            <form id="uploadForm" onsubmit="handleUpload(event)">
+                <div class="form-group">
+                    <label class="form-label">Destination Folder</label>
+                    <select id="uploadFolder" class="form-control">
+                        <option value="uploads">uploads (Default Uploads)</option>
+                        <option value="quran">quran (Quran Recitations)</option>
+                        <option value="ambient">ambient (Ambient & Music)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Choose File (.zip, .mp3, .wav)</label>
+                    <input type="file" id="uploadFileInput" class="form-control" required>
+                </div>
+                <div id="uploadProgress" style="display: none; font-size: 12px; color: var(--accent); margin-bottom: 10px;">
+                    Uploading and extracting archive...
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn" onclick="closeModal('uploadModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadSubmitBtn">Upload & Extract</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="adminModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">🔐 تسجيل دخول المشرف • Admin Login</div>
+                <button class="modal-close" onclick="closeModal('adminModal')">&times;</button>
+            </div>
+            <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">كلمة مرور المشرف (Admin Password)</label>
+                    <input type="password" id="adminPasswordInput" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <div id="adminLoginError" style="display: none; font-size: 12px; color: var(--red); margin-bottom: 10px;">
+                    كلمة المرور غير صحيحة!
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn" onclick="closeModal('adminModal')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary" id="adminLoginBtn">دخول</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Pure Vanilla JS App Logic (0 external dependencies) -->
+    <script>
+        let stationsData = [];
+        let activePlayingId = null;
+        let isAdmin = false;
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('show');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+
+        async function checkAdminAuth() {
+            try {
+                let res = await fetch('/api/admin/verify');
+                let data = await res.json();
+                isAdmin = !!data.authenticated;
+                updateAdminUI();
+            } catch (err) {
+                isAdmin = false;
+                updateAdminUI();
+            }
+        }
+
+        function updateAdminUI() {
+            const ftpBtn = document.getElementById('ftpHeaderBtn');
+            const uploadBtn = document.getElementById('uploadHeaderBtn');
+            const adminBtn = document.getElementById('adminHeaderBtn');
+
+            if (isAdmin) {
+                if (ftpBtn) ftpBtn.style.display = 'inline-flex';
+                if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+                if (adminBtn) adminBtn.textContent = '🚪 Logout';
+            } else {
+                if (ftpBtn) ftpBtn.style.display = 'none';
+                if (uploadBtn) uploadBtn.style.display = 'none';
+                if (adminBtn) adminBtn.textContent = '🔐 Admin';
+            }
+        }
+
+        async function handleAdminHeaderAction() {
+            if (isAdmin) {
+                try {
+                    await fetch('/api/admin/logout', { method: 'POST' });
+                    isAdmin = false;
+                    updateAdminUI();
+                    renderStations();
+                    alert('تم تسجيل الخروج من لوحة المشرف.');
+                } catch (e) {}
+            } else {
+                openModal('adminModal');
+            }
+        }
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const password = document.getElementById('adminPasswordInput').value;
+            const errDiv = document.getElementById('adminLoginError');
+            errDiv.style.display = 'none';
+
+            try {
+                let res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                if (res.ok) {
+                    isAdmin = true;
+                    closeModal('adminModal');
+                    document.getElementById('adminPasswordInput').value = '';
+                    updateAdminUI();
+                    renderStations();
+                    alert('مرحباً بك! تم تفعيل وضع المشرف بنجاح.');
+                } else {
+                    errDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errDiv.style.display = 'block';
+            }
+        }
+
+        async function fetchStations() {
+            try {
+                let res = await fetch('/api/stations');
+                stationsData = await res.json();
+                renderStations();
+            } catch (err) {
+                console.error('Error fetching stations:', err);
+            }
+        }
+
+        function renderStations() {
+            let container = document.getElementById('stationsGrid');
+            let totalListeners = 0;
+
+            let html = '';
+            stationsData.forEach(s => {
+                totalListeners += (s.listeners || 0);
+                let isPlaying = s.id === activePlayingId;
+                let statusBadge = s.status === 'online' 
+                    ? '<span class="badge badge-green">Online</span>'
+                    : (s.status.startsWith('backup') 
+                        ? `<span class="badge badge-gold">Backup #${s.active_source_idx}</span>`
+                        : '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--red);">Offline</span>');
+
+                let adminStackHtml = '';
+                if (isAdmin) {
+                    let sourcesHtml = s.sources.map((src, idx) => {
+                        let isActive = idx === s.active_source_idx;
+                        return `
+                            <div class="source-item ${isActive ? 'active' : ''}">
+                                <span class="source-name">${idx + 1}. ${src}</span>
+                                <span style="font-size: 10px; opacity: 0.8;">${isActive ? 'Active' : ''}</span>
+                            </div>
+                        `;
+                    }).join('');
+
+                    adminStackHtml = `
+                        <div class="source-stack" style="margin-top: 8px;">
+                            <div class="source-header">
+                                <span>Multi-Source Redundancy Stack</span>
+                                <span style="color: var(--accent);">Active: #${s.active_source_idx + 1}</span>
+                            </div>
+                            ${sourcesHtml}
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="station-card ${isPlaying ? 'active-playing' : ''}" id="card-${s.id}">
+                        <div>
+                            <div class="card-top">
+                                <div class="station-info">
+                                    <div class="station-icon">${s.icon || '📻'}</div>
+                                    <div>
+                                        <div class="station-title">${s.name}</div>
+                                        <div class="station-category">${s.category || 'Radio'}</div>
+                                    </div>
+                                </div>
+                                ${statusBadge}
+                            </div>
+                            <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px; line-height: 1.5;">${s.description || ''}</p>
+                        </div>
+
+                        ${adminStackHtml}
+
+                        <div class="card-actions">
+                            <div style="font-size: 11px; color: var(--text-muted);">
+                                🎧 <strong>${s.listeners || 0}</strong> listeners
+                            </div>
+                            <div class="card-buttons">
+                                <button class="btn-play" onclick="playStation('${s.id}')">
+                                    ${isPlaying ? '⏸ Pause' : '▶ Play'}
+                                </button>
+                                <a href="/listen/${s.id}" class="btn" style="padding: 6px 10px;" target="_blank">🔗 Player</a>
+                                <a href="/station/${s.id}.m3u" class="btn" style="padding: 6px 10px;" download>📥 .m3u</a>
+                                <button class="btn" style="padding: 6px 10px;" onclick="copyStreamUrl('${s.id}')">📋 Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('statStations').textContent = stationsData.length;
+            document.getElementById('statListeners').textContent = totalListeners;
+        }
+
+        function playStation(stationId) {
+            let audio = document.getElementById('audioElement');
+            let station = stationsData.find(s => s.id === stationId);
+            if (!station) return;
+
+            if (activePlayingId === stationId && !audio.paused) {
+                audio.pause();
+                activePlayingId = null;
+                document.getElementById('playerStatus').textContent = 'Paused';
+            } else {
+                activePlayingId = stationId;
+                audio.src = `/station/${stationId}`;
+                audio.play().catch(e => console.log('Autoplay error:', e));
+                document.getElementById('playerIcon').textContent = station.icon || '📻';
+                document.getElementById('playerTitle').textContent = station.name;
+                document.getElementById('playerStatus').textContent = `Streaming Live • 128kbps MP3`;
+            }
+            renderStations();
+        }
+
+        function copyStreamUrl(stationId) {
+            let url = window.location.origin + `/station/${stationId}`;
+            navigator.clipboard.writeText(url);
+            alert('Copied Stream URL to clipboard:\n' + url);
+        }
+
+        async function handleUpload(e) {
+            e.preventDefault();
+            let fileInput = document.getElementById('uploadFileInput');
+            let folder = document.getElementById('uploadFolder').value;
+            if (!fileInput.files.length) return;
+
+            let formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('folder', folder);
+
+            let progress = document.getElementById('uploadProgress');
+            let submitBtn = document.getElementById('uploadSubmitBtn');
+            progress.style.display = 'block';
+            submitBtn.disabled = true;
+
+            try {
+                let res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                let data = await res.json();
+                if (res.ok) {
+                    alert('Upload success! ' + (data.result.extracted_count ? `Extracted ${data.result.extracted_count} audio files.` : 'File saved.'));
+                    closeModal('uploadModal');
+                    fileInput.value = '';
+                } else {
+                    alert('Upload failed: ' + (data.detail || 'Server error'));
+                }
+            } catch (err) {
+                alert('Upload error: ' + err);
+            } finally {
+                progress.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Initialize
+        checkAdminAuth().then(() => {
+            fetchStations();
+            // Check if admin param is in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin') === 'true' && !isAdmin) {
+                openModal('adminModal');
+            }
+        });
+
+        setInterval(fetchStations, 3000);
+    </script>
+</body>
+</html>

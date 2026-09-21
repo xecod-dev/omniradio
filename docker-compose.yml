@@ -1,0 +1,19 @@
+services:
+  radio-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: radio-app:latest
+    container_name: radio-app
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "2121:2121"
+      - "2122-2125:2122-2125"
+    volumes:
+      - /home/saas/radio/audio:/app/audio
+      - /home/saas/radio/config:/app/config
+    environment:
+      - PORT=9000
+      - AUDIO_DIR=/app/audio
+      - CONFIG_FILE=/app/config/stations.json

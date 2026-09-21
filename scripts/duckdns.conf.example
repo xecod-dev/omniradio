@@ -1,0 +1,4 @@
+# DuckDNS Configuration Example
+# Copy to duckdns.conf and set your domain and token
+DUCKDNS_DOMAIN="your-subdomain"
+DUCKDNS_TOKEN="your-duckdns-token"

@@ -1,0 +1,34 @@
+# Python & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Secrets & Local configuration
+scripts/duckdns.conf
+*.env
+*.log
+scripts/*.log
+
+# Audio files (preserve directory structure with .gitkeep)
+audio/*
+!audio/quran/
+audio/quran/*
+!audio/quran/.gitkeep
+!audio/ambient/
+audio/ambient/*
+!audio/ambient/.gitkeep
+!audio/uploads/
+audio/uploads/*
+!audio/uploads/.gitkeep
+!audio/standby_chime.mp3
+
+# Migration archives
+omniradio_bundle_*.tar.gz
+*.tar.gz
+*.tar
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
