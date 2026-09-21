@@ -876,6 +876,25 @@
             text-decoration: underline;
         }
 
+        .footer-ir {
+            display: inline-block;
+            color: var(--theme-accent);
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 999px;
+            padding: 2px 8px;
+            white-space: nowrap;
+            opacity: 0.85;
+        }
+
+        .footer-ir:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.08);
+            text-decoration: underline;
+        }
+
         @media (max-width: 640px) {
             footer {
                 flex-wrap: wrap;
@@ -1094,6 +1113,7 @@
             <span class="footer-os"><a href="https://github.com/xecod-dev/omniradio" target="_blank" style="color: var(--theme-accent); font-weight: bold; text-decoration: none;">صدقة جارية مفتوح المصدر</a></span>
             <span class="footer-ver" id="footerVersion"></span>
             <a class="footer-dl" href="/playlist.m3u" title="تحميل قائمة المحطات الأحدث">تحميل القائمة</a>
+            <a class="footer-ir" href="http://www.internet-radio.com" target="_blank" rel="noopener" title="Internet-Radio.com — Online Radio Directory">Internet-Radio.com</a>
         </div>
         <a href="/" class="other-stations-link">
             <span>جميع المحطات</span>
