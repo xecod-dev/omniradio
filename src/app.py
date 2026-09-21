@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import socket
 import logging
@@ -167,6 +168,15 @@ async def serve_station_player(station_id: str, request: Request):
     html = html.replace("{{STATION_DESC}}", relay.config.get("description", "بث حي مستمر على مدار 24 ساعة"))
     html = html.replace("{{STATION_ICON}}", relay.config.get("icon", "📖"))
     html = html.replace("{{PAGE_URL}}", f"{base_url}/listen/{station_id}")
+
+    # Allowed stations for the channel switcher dropdown (id/name/icon/category only — no secrets)
+    stations_meta = [
+        {"id": s["id"], "name": s["name"], "icon": s["icon"], "category": s["category"]}
+        for s in engine.get_all_stations_status()
+        if s["id"] == station_id or engine.get_relay(s["id"]) is not None
+    ]
+    stations_meta.sort(key=lambda x: x["name"])
+    html = html.replace("{{STATIONS_JSON}}", json.dumps(stations_meta, ensure_ascii=False))
     html = html.replace("{{THEME_BG1}}", theme["bg1"])
     html = html.replace("{{THEME_BG2}}", theme["bg2"])
     html = html.replace("{{THEME_ACCENT}}", theme["accent"])
