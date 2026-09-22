@@ -41,3 +41,6 @@ omniradio_bundle_*.tar.gz
 
 # radio-browser sync log
 scripts/radio_browser_sync.log
+
+# Runtime state (regenerates daily)
+data/azkar.json
