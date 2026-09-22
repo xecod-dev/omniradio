@@ -18,6 +18,7 @@
       "icon": "🕌",
       "sources": [
         "https://stream.radiojar.com/8s5u5tpdtwzuv",
+        "https://stream.zeno.fm/ru2hqnplhk7uv",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
