@@ -6,8 +6,10 @@ import subprocess
 import threading
 from typing import List, Dict, Any, Optional, Set
 from collections import deque
+import json
 import urllib.request
 import urllib.error
+import urllib.parse
 
 logger = logging.getLogger("radio.engine")
 
@@ -105,6 +107,39 @@ class StationRelay:
                     pass
             self._ffmpeg_proc = None
 
+    def _build_archive_playlist(self, identifier: str) -> str:
+        """Fetch archive.org item metadata and write a remote concat playlist.
+
+        No audio is downloaded — the playlist references the item's MP3 files
+        by their https://archive.org/download/... URLs. ffmpeg's concat demuxer
+        streams each file on demand, and -stream_loop -1 replays the whole
+        item forever.
+        """
+        meta_url = f"https://archive.org/metadata/{identifier}"
+        req = urllib.request.Request(
+            meta_url,
+            headers={"User-Agent": "OmniRadio-Relay/2.0 (Windows Media Player Compatible)"}
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            meta = json.loads(resp.read().decode("utf-8"))
+
+        names = sorted(
+            f.get("name", "")
+            for f in meta.get("files", [])
+            if f.get("name", "").lower().endswith(".mp3")
+        )
+        names = [n for n in names if n]  # drop empties
+        if not names:
+            raise ValueError(f"No MP3 files found in archive.org item '{identifier}'")
+
+        playlist_file = f"/tmp/archive_{self.station_id}.txt"
+        with open(playlist_file, "w", encoding="utf-8") as f:
+            for name in names:
+                url = f"https://archive.org/download/{identifier}/{urllib.parse.quote(name)}"
+                f.write(f"file '{url}'\n")
+        logger.info(f"[{self.station_id}] Archive playlist for '{identifier}': {len(names)} files -> {playlist_file}")
+        return playlist_file
+
     def _build_ffmpeg_cmd(self, source: str) -> List[str]:
         """Constructs ffmpeg command for internet stream, local directory, or single file."""
         bitrate = f"{self.config.get('bitrate', 128)}k"
@@ -142,6 +177,24 @@ class StationRelay:
                     "-ar", "44100", "-ac", "2",
                     "-f", "mp3", "pipe:1"
                 ]
+        elif source.startswith("archive:"):
+            # Archive.org item — stream the item's MP3 list remotely (no download).
+            # A metadata fetch builds a concat playlist of https://archive.org/download/ URLs.
+            identifier = source[8:].strip()
+            try:
+                archive_playlist_file = self._build_archive_playlist(identifier)
+            except Exception as e:
+                logger.error(f"[{self.station_id}] Archive.org source failed for '{identifier}': {e}")
+                raise  # failed source -> failover to next source
+            return [
+                "ffmpeg", "-re", "-f", "concat", "-safe", "0",
+                "-stream_loop", "-1",
+                "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
+                "-i", archive_playlist_file,
+                "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
+                "-ar", "44100", "-ac", "2",
+                "-f", "mp3", "pipe:1"
+            ]
         else:
             # Internet Stream (HTTP, HTTPS, Icecast, Shoutcast, HLS)
             # Use user-agent and auto-reconnect options

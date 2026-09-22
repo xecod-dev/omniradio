@@ -77,6 +77,19 @@
       "bitrate": 128
     },
     {
+      "id": "basit-archive",
+      "name": "عبد الباسط - المصحف كاملاً (أرشيف الإنترنت)",
+      "name_en": "Abdulbasit - Full Mushaf (Archive.org)",
+      "category": "Quran Recitations",
+      "description": "المصحف كاملاً بصوت الشيخ عبد الباسط عبد الصمد، يُبث مباشرة من أرشيف الإنترنت بدون تحميل",
+      "icon": "📖",
+      "sources": [
+        "archive:AbdulBasitTartilCairoEighths",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
       "id": "local-library",
       "name": "المكتبة الصوتية والملفات المرفوعة",
       "name_en": "Islamic Audio Library (Uploads)",
