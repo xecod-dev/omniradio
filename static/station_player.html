@@ -451,9 +451,11 @@
             overflow: hidden;
         }
 
-        /* Channel switcher dropdown */
+        /* Channel switcher dropdown (top of player card) */
         .station-switcher {
-            margin-top: 6px;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
         }
         .station-switcher select {
             width: 100%;
@@ -1208,6 +1210,12 @@
         <!-- Unified Player Glass Card -->
         <div class="player-card">
 
+            <!-- Station switcher dropdown (top of card) -->
+            <div class="station-switcher">
+                <select id="stationSwitcher" onchange="switchStation(this.value)" aria-label="تغيير المحطة">
+                </select>
+            </div>
+
             <!-- Live & Total Listeners Counter Badge -->
             <div class="listener-metrics-badge" id="listenerMetricsBadge">
                 <span class="metric-item">
@@ -1236,10 +1244,6 @@
                     <h1 class="station-name">{{STATION_NAME}}</h1>
                     <div class="station-category">{{STATION_CATEGORY}}</div>
                     <p class="station-desc">{{STATION_DESC}}</p>
-                    <div class="station-switcher">
-                        <select id="stationSwitcher" onchange="switchStation(this.value)" aria-label="تغيير المحطة">
-                        </select>
-                    </div>
                 </div>
             </div>
 
