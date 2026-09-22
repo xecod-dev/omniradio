@@ -1918,6 +1918,7 @@
                 canvas.width = W;
                 canvas.height = H;
                 const ctx = canvas.getContext('2d');
+                const GOLD = 'rgba(212, 175, 55, ';
 
                 // Background: deep night gradient with subtle gold glow
                 const bg = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, W * 0.75);
@@ -1927,40 +1928,144 @@
                 ctx.fillStyle = bg;
                 ctx.fillRect(0, 0, W, H);
 
-                // Gold ornamental frame
-                ctx.strokeStyle = 'rgba(212, 175, 55, 0.55)';
+                // Soft gold halo behind the quote block
+                const halo = ctx.createRadialGradient(W / 2, H / 2 + 30, 60, W / 2, H / 2 + 30, W * 0.5);
+                halo.addColorStop(0, GOLD + '0.10)');
+                halo.addColorStop(1, GOLD + '0)');
+                ctx.fillStyle = halo;
+                ctx.fillRect(0, 0, W, H);
+
+                // Outer + inner gold frames
+                ctx.strokeStyle = GOLD + '0.55)';
                 ctx.lineWidth = 4;
                 ctx.strokeRect(36, 36, W - 72, H - 72);
-                ctx.strokeStyle = 'rgba(212, 175, 55, 0.18)';
+                ctx.strokeStyle = GOLD + '0.18)';
                 ctx.lineWidth = 1.5;
                 ctx.strokeRect(54, 54, W - 108, H - 108);
 
+                // --- Corner ornament: 8-point star (two rotated squares) ---
+                function drawCornerStar(cx, cy, r) {
+                    ctx.save();
+                    ctx.strokeStyle = GOLD + '0.55)';
+                    ctx.lineWidth = 2;
+                    for (let rot = 0; rot < 2; rot++) {
+                        ctx.beginPath();
+                        for (let i = 0; i < 4; i++) {
+                            const a = (rot * Math.PI / 4) + (i * Math.PI / 2);
+                            const x = cx + Math.cos(a) * r;
+                            const y = cy + Math.sin(a) * r;
+                            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                        }
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+                const cornerInset = 80;
+                drawCornerStar(cornerInset, cornerInset, 20);
+                drawCornerStar(W - cornerInset, cornerInset, 20);
+                drawCornerStar(cornerInset, H - cornerInset, 20);
+                drawCornerStar(W - cornerInset, H - cornerInset, 20);
+
+                // --- Ornament divider: line ✦ line (and one above the footer) ---
+                function drawDivider(y) {
+                    ctx.save();
+                    ctx.strokeStyle = GOLD + '0.40)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(W / 2 - 200, y);
+                    ctx.lineTo(W / 2 - 28, y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(W / 2 + 28, y);
+                    ctx.lineTo(W / 2 + 200, y);
+                    ctx.stroke();
+                    ctx.fillStyle = GOLD + '0.9)';
+                    ctx.font = '700 30px "Amiri", "Scheherazade New", serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('✦', W / 2, y);
+                    ctx.restore();
+                }
+
                 // Header ornament
-                ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
+                ctx.fillStyle = GOLD + '0.9)';
                 ctx.font = '700 44px "Amiri", "Scheherazade New", serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('✦  قبس إيماني  ✦', W / 2, 150);
+                drawDivider(216);
 
-                // Quote text (wrapped, centered)
+                // Attribution line (source chip text, e.g. "قاعدة المنهاج")
+                const srcEl = document.getElementById('quoteTotalBadge');
+                const sourceName = srcEl ? srcEl.textContent.trim() : '';
+                const hasSource = sourceName.length > 0 && sourceName.length < 60;
+
+                // Quote text (wrapped, centered RTL)
+                const lines = wrapArabic(ctx, quote, W - 320, 70);
+                const lineHeight = 84;
+                const blockH = lines.length * lineHeight + (hasSource ? 120 : 0);
+                let y = (H / 2) - (blockH / 2) + 20;
+
+                // Backing panel behind the quote + attribution
+                const panelTop = y - 70;
+                const panelH = blockH + 140;
+                ctx.save();
+                ctx.fillStyle = 'rgba(2, 6, 4, 0.45)';
+                function roundRectPath(x, y, w, h, r) {
+                    const p = new Path2D();
+                    if (p.roundRect) {
+                        p.roundRect(x, y, w, h, r);
+                    } else {
+                        p.moveTo(x + r, y);
+                        p.arcTo(x + w, y, x + w, y + h, r);
+                        p.arcTo(x + w, y + h, x, y + h, r);
+                        p.arcTo(x, y + h, x, y, r);
+                        p.arcTo(x, y, x + w, y, r);
+                        p.closePath();
+                    }
+                    return p;
+                }
+                const panel = roundRectPath(150, panelTop, W - 300, panelH, 36);
+                ctx.fill(panel);
+                ctx.strokeStyle = GOLD + '0.28)';
+                ctx.lineWidth = 2.5;
+                ctx.stroke(panel);
+                // inner hairline
+                const panel2 = roundRectPath(168, panelTop + 18, W - 336, panelH - 36, 24);
+                ctx.strokeStyle = GOLD + '0.12)';
+                ctx.lineWidth = 1;
+                ctx.stroke(panel2);
+                ctx.restore();
+
                 ctx.fillStyle = '#f3e9d2';
                 ctx.font = fontOk ? '700 64px "Amiri", "Scheherazade New", serif' : '700 60px serif';
                 ctx.direction = 'rtl';
-
-                const lines = wrapArabic(ctx, quote, W - 220, 70);
-                const lineHeight = 84;
-                const blockH = lines.length * lineHeight;
-                let y = (H / 2) - (blockH / 2) + 40;
                 for (const line of lines) {
                     ctx.fillText(line, W / 2, y);
                     y += lineHeight;
                 }
 
-                // Footer: site name
-                ctx.fillStyle = 'rgba(212, 175, 55, 0.85)';
+                // Attribution under the quote (small, gold, ornamental dash)
+                if (hasSource) {
+                    ctx.direction = 'rtl';
+                    ctx.fillStyle = GOLD + '0.95)';
+                    ctx.font = '700 40px "Amiri", "Scheherazade New", serif';
+                    ctx.fillText('— ' + sourceName, W / 2, y + 34);
+                }
+
+                // Bottom divider above the footer
+                drawDivider(H - 190);
+
+                // Footer: site name + brand
+                ctx.fillStyle = GOLD + '0.85)';
                 ctx.font = '700 40px "Amiri", "Scheherazade New", serif';
                 ctx.direction = 'ltr';
                 ctx.fillText('radio.xecod.com', W / 2, H - 110);
+                ctx.fillStyle = GOLD + '0.45)';
+                ctx.font = '600 26px "Amiri", "Scheherazade New", serif';
+                ctx.direction = 'rtl';
+                ctx.fillText('إذاعة القرآن الكريم', W / 2, H - 60);
 
                 const img = document.getElementById('quoteImgCanvas');
                 const dataUrl = canvas.toDataURL('image/png');
