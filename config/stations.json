@@ -18,8 +18,7 @@
       "icon": "🕌",
       "sources": [
         "https://stream.radiojar.com/8s5u5tpdtwzuv",
-        "https://qurango.net/radio/salma",
-        "http://live.mp3quran.net:8006/;",
+        "http://live.mp3quran.net:8006/",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
@@ -27,12 +26,13 @@
     {
       "id": "abdulbasit",
       "name": "الشيخ عبد الباسط عبد الصمد",
-      "name_en": "Sheikh Abdulbasit Abdulsamad (Mojawwad)",
+      "name_en": "Sheikh Abdulbasit Abdulsamad",
       "category": "Quran Recitations",
-      "description": "تلاوات نادرة ومصحف مجود بصوت الشيخ عبد الباسط عبد الصمد",
+      "description": "تلاوات الشيخ عبد الباسط عبد الصمد، مع المصحف كاملاً من أرشيف الإنترنت",
       "icon": "📖",
       "sources": [
         "https://qurango.net/radio/abdulbasit_abdulsamad_mojawwad",
+        "archive:AbdulBasitTartilCairoEighths",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
@@ -76,19 +76,7 @@
       ],
       "bitrate": 128
     },
-    {
-      "id": "basit-archive",
-      "name": "عبد الباسط - المصحف كاملاً (أرشيف الإنترنت)",
-      "name_en": "Abdulbasit - Full Mushaf (Archive.org)",
-      "category": "Quran Recitations",
-      "description": "المصحف كاملاً بصوت الشيخ عبد الباسط عبد الصمد، يُبث مباشرة من أرشيف الإنترنت بدون تحميل",
-      "icon": "📖",
-      "sources": [
-        "archive:AbdulBasitTartilCairoEighths",
-        "local:/app/audio/quran"
-      ],
-      "bitrate": 128
-    },
+
     {
       "id": "local-library",
       "name": "المكتبة الصوتية والملفات المرفوعة",
