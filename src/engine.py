@@ -2,6 +2,7 @@ import os
 import time
 import asyncio
 import logging
+import random
 import subprocess
 import threading
 from typing import List, Dict, Any, Optional, Set
@@ -114,6 +115,11 @@ class StationRelay:
         by their https://archive.org/download/... URLs. ffmpeg's concat demuxer
         streams each file on demand, and -stream_loop -1 replays the whole
         item forever.
+
+        The sorted file list is rotated by a random offset so every restart
+        begins at a different surah instead of always the first one. Order
+        stays contiguous (cyclic rotation), so surahs still play in sequence
+        from wherever the rotation lands.
         """
         meta_url = f"https://archive.org/metadata/{identifier}"
         req = urllib.request.Request(
@@ -132,12 +138,17 @@ class StationRelay:
         if not names:
             raise ValueError(f"No MP3 files found in archive.org item '{identifier}'")
 
+        # Random start position (cyclic rotation keeps surah order intact)
+        if len(names) > 1:
+            offset = random.randrange(len(names))
+            names = names[offset:] + names[:offset]
+
         playlist_file = f"/tmp/archive_{self.station_id}.txt"
         with open(playlist_file, "w", encoding="utf-8") as f:
             for name in names:
                 url = f"https://archive.org/download/{identifier}/{urllib.parse.quote(name)}"
                 f.write(f"file '{url}'\n")
-        logger.info(f"[{self.station_id}] Archive playlist for '{identifier}': {len(names)} files -> {playlist_file}")
+        logger.info(f"[{self.station_id}] Archive playlist for '{identifier}': {len(names)} files, random start -> {playlist_file}")
         return playlist_file
 
     def _build_ffmpeg_cmd(self, source: str) -> List[str]:

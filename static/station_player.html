@@ -369,18 +369,26 @@
             padding: 0 2px;
         }
 
+        .identity-left {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 7px;
+        }
+
         .art-box {
             flex: 0 0 auto;
-            width: 108px;
-            height: 108px;
+            width: 88px;
+            height: 88px;
             background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02));
             border: 1.5px solid rgba(255, 255, 255, 0.14);
             box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 22px var(--theme-glow);
-            border-radius: 26px;
+            border-radius: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 54px;
+            font-size: 44px;
             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
             position: relative;
             cursor: pointer;
@@ -858,16 +866,12 @@
             margin-top: 8px;
         }
 
-        /* Azkar merged into the station icon (art-box) */
-        .azkar-overlay {
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
+        /* Azkar chip below the station icon */
+        .azkar-chip {
+            display: inline-flex;
             align-items: center;
-            gap: 5px;
-            background: rgba(5, 12, 8, 0.88);
+            gap: 6px;
+            background: rgba(5, 12, 8, 0.9);
             border: 1px solid rgba(223, 183, 108, 0.5);
             color: var(--accent);
             border-radius: 999px;
@@ -877,15 +881,17 @@
             white-space: nowrap;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
             cursor: pointer;
-            pointer-events: none;
-            transition: background 0.3s, border-color 0.3s;
-            z-index: 2;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
             font-family: inherit;
             line-height: 1.4;
+            max-width: 100%;
         }
-        .art-box:hover .azkar-overlay {
-            background: rgba(223, 183, 108, 0.22);
+        .azkar-chip:hover {
+            background: rgba(223, 183, 108, 0.25);
             border-color: var(--theme-accent);
+        }
+        .azkar-chip:active {
+            transform: scale(0.96);
         }
         #azkarText {
             white-space: nowrap;
@@ -902,14 +908,13 @@
             min-width: 17px;
             text-align: center;
         }
-
-        .azkar-overlay.pop {
+        .azkar-chip.pop {
             animation: azkarPop 0.25s ease;
         }
         @keyframes azkarPop {
-            0% { transform: translateX(-50%) scale(1); }
-            50% { transform: translateX(-50%) scale(1.18); }
-            100% { transform: translateX(-50%) scale(1); }
+            0% { transform: scale(1); }
+            50% { transform: scale(1.18); }
+            100% { transform: scale(1); }
         }
 
         /* Quote Image Modal */
@@ -1203,9 +1208,12 @@
 
             <!-- Station Identity: artwork + name -->
             <div class="card-identity">
-                <div class="art-box" id="artBox" onclick="azkarTap()" title="اضغط للذكر">
-                    {{STATION_ICON}}
-                    <span class="azkar-overlay" id="azkarBtn">
+                <div class="identity-left">
+                    <div class="art-box" id="artBox" onclick="azkarTap()" title="اضغط للذكر">
+                        {{STATION_ICON}}
+                    </div>
+                    <span class="azkar-chip" id="azkarBtn" onclick="azkarTap()" title="اضغط للذكر">
+                        <span>✨</span>
                         <span id="azkarText">سبحان الله</span>
                         <span id="azkarCount">٠</span>
                     </span>
