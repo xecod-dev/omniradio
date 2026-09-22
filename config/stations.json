@@ -106,6 +106,19 @@
       "bitrate": 128
     },
     {
+      "id": "bandar-balila",
+      "name": "الشيخ بندر بليلة",
+      "name_en": "Sheikh Bandar Balila",
+      "category": "Quran Recitations",
+      "description": "مصحف الشيخ بندر بليلة مقسم صفحات، يُبث مباشرة من أرشيف الإنترنت بدون تحميل",
+      "icon": "📖",
+      "sources": [
+        "archive:rabiea3568356835683568865",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
       "id": "local-library",
       "name": "المكتبة الصوتية والملفات المرفوعة",
       "name_en": "Islamic Audio Library (Uploads)",
