@@ -2000,16 +2000,41 @@
                 const srcEl = document.getElementById('quoteTotalBadge');
                 const sourceName = srcEl ? srcEl.textContent.trim() : '';
                 const hasSource = sourceName.length > 0 && sourceName.length < 60;
+                const attributionH = hasSource ? 110 : 0;
 
-                // Quote text (wrapped, centered RTL)
-                const lines = wrapArabic(ctx, quote, W - 320, 70);
-                const lineHeight = 84;
-                const blockH = lines.length * lineHeight + (hasSource ? 120 : 0);
-                let y = (H / 2) - (blockH / 2) + 20;
+                // ---- Quote layout: measure with the REAL draw font, then auto-fit ----
+                const maxPanelW = W - 240;         // horizontal room for the panel
+                const maxBlockH = H - 430;         // vertical room between divider(216) and footer divider (~1160)
+                const baseLineH = 84;
+                const baseFont = fontOk ? '700 64px "Amiri", "Scheherazade New", serif' : '700 60px serif';
 
-                // Backing panel behind the quote + attribution
-                const panelTop = y - 70;
-                const panelH = blockH + 140;
+                let lineHeight = baseLineH;
+                ctx.font = baseFont;
+                ctx.direction = 'rtl';
+                let lines = wrapArabic(ctx, quote, maxPanelW - 120, 70);
+                let blockH = lines.length * lineHeight + attributionH;
+
+                // Shrink font + spacing until the quote fits the available vertical room
+                let fontPx = fontOk ? 64 : 60;
+                while (blockH > maxBlockH && fontPx > 30) {
+                    fontPx -= 4;
+                    lineHeight = Math.round(fontPx * 1.32);
+                    ctx.font = fontOk ? `700 ${fontPx}px "Amiri", "Scheherazade New", serif` : `700 ${fontPx}px serif`;
+                    lines = wrapArabic(ctx, quote, maxPanelW - 120, fontPx);
+                    blockH = lines.length * lineHeight + attributionH;
+                }
+
+                // Panel hugs the widest line (min 44% of canvas, max 78%)
+                let widest = 0;
+                for (const line of lines) {
+                    widest = Math.max(widest, ctx.measureText(line).width);
+                }
+                const panelW = Math.min(Math.max(widest + 140, W * 0.44), W * 0.78);
+                const panelX = (W - panelW) / 2;
+                const panelH = blockH + 130;
+                const panelTop = (H / 2) - (panelH / 2) + 10;
+
+                // Backing panel (auto-sized to the text)
                 ctx.save();
                 ctx.fillStyle = 'rgba(2, 6, 4, 0.45)';
                 function roundRectPath(x, y, w, h, r) {
@@ -2026,21 +2051,23 @@
                     }
                     return p;
                 }
-                const panel = roundRectPath(150, panelTop, W - 300, panelH, 36);
+                const panel = roundRectPath(panelX, panelTop, panelW, panelH, 36);
                 ctx.fill(panel);
                 ctx.strokeStyle = GOLD + '0.28)';
                 ctx.lineWidth = 2.5;
                 ctx.stroke(panel);
                 // inner hairline
-                const panel2 = roundRectPath(168, panelTop + 18, W - 336, panelH - 36, 24);
+                const panel2 = roundRectPath(panelX + 18, panelTop + 18, panelW - 36, panelH - 36, 24);
                 ctx.strokeStyle = GOLD + '0.12)';
                 ctx.lineWidth = 1;
                 ctx.stroke(panel2);
                 ctx.restore();
 
+                // Quote text (centered in the panel)
                 ctx.fillStyle = '#f3e9d2';
-                ctx.font = fontOk ? '700 64px "Amiri", "Scheherazade New", serif' : '700 60px serif';
+                ctx.font = fontOk ? `700 ${fontPx}px "Amiri", "Scheherazade New", serif` : `700 ${fontPx}px serif`;
                 ctx.direction = 'rtl';
+                let y = panelTop + 70;
                 for (const line of lines) {
                     ctx.fillText(line, W / 2, y);
                     y += lineHeight;
@@ -2051,7 +2078,7 @@
                     ctx.direction = 'rtl';
                     ctx.fillStyle = GOLD + '0.95)';
                     ctx.font = '700 40px "Amiri", "Scheherazade New", serif';
-                    ctx.fillText('— ' + sourceName, W / 2, y + 34);
+                    ctx.fillText('— ' + sourceName, W / 2, y + 30);
                 }
 
                 // Bottom divider above the footer
