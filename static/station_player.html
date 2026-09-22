@@ -1923,18 +1923,43 @@
                 const hue = Math.floor(Math.random() * 360);            // background hue
                 const accentHue = (hue + 165 + Math.floor(Math.random() * 40)) % 360; // ~complement
                 const hueBg = (h, s, l) => `hsl(${h}, ${s}%, ${l}%)`;
-                const GOLD = `hsla(${accentHue}, 72%, ${56 + Math.floor(Math.random() * 10)}%, `; // prefix, alpha appended
-                const TEXT = hueBg(accentHue, 42, 91);                  // warm cream tinted by accent
+                const GOLD = `hsla(${accentHue}, 58%, ${38 + Math.floor(Math.random() * 10)}%, `; // deep accent prefix
+                const TEXT = `hsl(${accentHue}, 38%, 24%)`;             // dark ink tinted by accent
 
-                // Background: deep gradient in the randomized hue
-                const bg = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, W * 0.75);
-                bg.addColorStop(0, hueBg(hue, 46, 13));
-                bg.addColorStop(0.55, hueBg(hue, 48, 8));
-                bg.addColorStop(1, 'hsl(0, 0%, 3%)');
+                // Background: soft light pastel wash from the base hue
+                const bg = ctx.createLinearGradient(0, 0, 0, H);
+                bg.addColorStop(0, hueBg(hue, 38, 94));
+                bg.addColorStop(0.5, hueBg(hue, 32, 86));
+                bg.addColorStop(1, hueBg(hue, 30, 78));
                 ctx.fillStyle = bg;
                 ctx.fillRect(0, 0, W, H);
 
-                // Soft gold halo behind the quote block
+                // ---- Vapours: soft misty pastel blobs drifting across the card ----
+                function drawVapour(cx, cy, r, color) {
+                    const g = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+                    g.addColorStop(0, color);
+                    g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = g;
+                    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+                }
+                const vapourPalette = [
+                    (a) => `hsla(${hue}, 55%, 88%, ${a})`,
+                    (a) => `hsla(${accentHue}, 45%, 90%, ${a})`,
+                    (a) => `hsla(${hue}, 60%, 84%, ${a})`,
+                    (a) => `hsla(${accentHue}, 50%, 92%, ${a})`
+                ];
+                const vapourSpots = [
+                    { x: W * 0.18, y: H * 0.16, r: W * 0.34, c: 0, a: 0.55 },
+                    { x: W * 0.82, y: H * 0.28, r: W * 0.38, c: 1, a: 0.5 },
+                    { x: W * 0.25, y: H * 0.62, r: W * 0.4, c: 2, a: 0.45 },
+                    { x: W * 0.78, y: H * 0.72, r: W * 0.36, c: 3, a: 0.5 },
+                    { x: W * 0.5, y: H * 0.42, r: W * 0.5, c: 1, a: 0.22 }
+                ];
+                for (const s of vapourSpots) {
+                    drawVapour(s.x, s.y, s.r, vapourPalette[s.c](s.a));
+                }
+
+                // Soft accent halo behind the quote block
                 const halo = ctx.createRadialGradient(W / 2, H / 2 + 30, 60, W / 2, H / 2 + 30, W * 0.5);
                 halo.addColorStop(0, GOLD + '0.10)');
                 halo.addColorStop(1, GOLD + '0)');
@@ -2040,9 +2065,12 @@
                 const panelH = blockH + 130;
                 const panelTop = (H / 2) - (panelH / 2) + 10;
 
-                // Backing panel (auto-sized to the text)
+                // Backing panel (auto-sized to the text) — frosted light glass
                 ctx.save();
-                ctx.fillStyle = 'rgba(2, 6, 4, 0.45)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+                ctx.shadowColor = GOLD + '0.28)';
+                ctx.shadowBlur = 34;
+                ctx.shadowOffsetY = 6;
                 function roundRectPath(x, y, w, h, r) {
                     const p = new Path2D();
                     if (p.roundRect) {
@@ -2059,6 +2087,8 @@
                 }
                 const panel = roundRectPath(panelX, panelTop, panelW, panelH, 36);
                 ctx.fill(panel);
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
                 ctx.strokeStyle = GOLD + '0.28)';
                 ctx.lineWidth = 2.5;
                 ctx.stroke(panel);
