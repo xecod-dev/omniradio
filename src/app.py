@@ -439,6 +439,119 @@ async def api_get_random_quote():
         return {"id": 0, "content": "من صَلُحَتْ صلاته صلح سائر عمله وفاز فوزا عظيما", "total_quotes": 0}
     return quote
 
+# ── Azkar Counter (per-day shared) ──
+import datetime
+AZKAR_DATA_PATH = Path("/app/data/azkar.json")
+
+def _today_key() -> str:
+    return datetime.date.today().isoformat()
+
+def _load_azkar() -> dict:
+    if AZKAR_DATA_PATH.exists():
+        try:
+            return json.loads(AZKAR_DATA_PATH.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
+
+def _save_azkar(data: dict):
+    AZKAR_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    AZKAR_DATA_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+@app.get("/api/azkar")
+async def api_azkar_get():
+    """Return today's total azkar count."""
+    data = _load_azkar()
+    return {"date": _today_key(), "count": data.get("count", 0)}
+
+@app.post("/api/azkar")
+async def api_azkar_post():
+    """Increment today's total azkar count by 1 (shared across all visitors)."""
+    data = _load_azkar()
+    today = _today_key()
+    if data.get("date") != today:
+        data = {"date": today, "count": 0}
+    data["count"] = data.get("count", 0) + 1
+    _save_azkar(data)
+    return {"date": today, "count": data["count"]}
+
+# ── Prayer Times ──
+PRAYER_TIMES_CACHE = {"data": None, "expires": 0}
+PRAYER_NAMES_AR = {"Fajr": "الفجر", "Sunrise": "الشروق", "Dhuhr": "الظهر",
+                   "Asr": "العصر", "Sunset": "المغرب", "Isha": "العشاء"}
+
+def _fetch_prayer_times(lat: float, lng: float, date_str: str) -> Optional[dict]:
+    import urllib.request as _urllib_request
+    url = (f"https://api.aladhan.com/v1/calendarByCoords?latitude={lat}"
+           f"&longitude={lng}&method=2&date={date_str}&formatted=True")
+    try:
+        req = _urllib_request.Request(url, headers={"User-Agent": "OmniRadio-Relay/2.0"})
+        with _urllib_request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+@app.get("/api/prayer-times")
+async def api_prayer_times(request: Request):
+    """Return today's prayer times for the user's location (IP geolocation) or explicit lat/lng."""
+    from datetime import date as _date
+    today = _date.today().isoformat()
+    cached = PRAYER_TIMES_CACHE
+    if cached["data"] and cached["expires"] > time.time():
+        return cached["data"]
+
+    lat = float(request.query_params.get("lat", 0))
+    lng = float(request.query_params.get("lng", 0))
+    city = request.query_params.get("city", "")
+
+    if (lat == 0 and lng == 0) and city:
+        geocode_url = (f"https://api.aladhan.com/v1/calendarByCity?city={city}"
+                       f"&country=EG&date={today}&formatted=True")
+        try:
+            req = _urllib_request.Request(geocode_url, headers={"User-Agent": "OmniRadio-Relay/2.0"})
+            with _urllib_request.urlopen(req, timeout=10) as resp:
+                geo_data = json.loads(resp.read().decode("utf-8"))
+            if geo_data.get("code") == 200 and geo_data.get("data"):
+                coords = geo_data["data"][0]["coordinates"]
+                lat, lng = float(coords["latitude"]), float(coords["longitude"])
+        except Exception:
+            pass
+
+    if lat == 0 and lng == 0:
+        try:
+            ip_url = "https://ipapi.co/json/"
+            req = _urllib_request.Request(ip_url, headers={"User-Agent": "OmniRadio-Relay/2.0"})
+            with _urllib_request.urlopen(req, timeout=8) as resp:
+                ip_data = json.loads(resp.read().decode("utf-8"))
+            lat = float(ip_data.get("latitude", 0) or 0)
+            lng = float(ip_data.get("longitude", 0) or 0)
+            if city == "" and ip_data.get("city"):
+                city = ip_data["city"]
+        except Exception:
+            pass
+
+    prayer_data = None
+    if lat != 0 and lng != 0:
+        prayer_data = _fetch_prayer_times(lat, lng, today)
+
+    if not prayer_data or prayer_data.get("code") != 200:
+        return {"error": "Unable to fetch prayer times", "city": city, "lat": lat, "lng": lng}
+
+    timings = prayer_data["data"]["timings"]
+    result = {
+        "date": today,
+        "city": city or prayer_data["data"].get("meta", {}).get("city", ""),
+        "latitude": lat,
+        "longitude": lng,
+        "timings": {
+            PRAYER_NAMES_AR.get(k, k): timings.get(k, "")
+            for k in ["Fajr", "Sunrise", "Dhuhr", "Asr", "Sunset", "Isha"]
+        },
+    }
+    PRAYER_TIMES_CACHE["data"] = result
+    PRAYER_TIMES_CACHE["expires"] = time.time() + 3600
+    return result
+
 @app.post("/api/quotes/sync")
 async def api_sync_quotes(request: Request):
     require_admin(request)

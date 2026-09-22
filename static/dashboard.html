@@ -19,6 +19,40 @@
             --text-muted: #94a3b8;
         }
 
+        /* Sky Layer */
+        #sky-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10000; overflow: hidden;
+        }
+
+        .cloud {
+            position: absolute; width: 120px; height: 50px; background: rgba(255,255,255,0.8);
+            border-radius: 50px; opacity: 0; transition: opacity 1.5s ease;
+            filter: blur(15px);
+        }
+        .cloud::before, .cloud::after {
+            content: ''; position: absolute; background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+        }
+        .cloud.type-1 { width: 160px; height: 60px; }
+        .cloud.type-1::before { width: 80px; height: 80px; top: -40px; left: 20px; }
+        .cloud.type-1::after { width: 60px; height: 60px; top: -30px; left: 80px; }
+
+        .day-mode .cloud { opacity: 0.15; animation: drift 60s linear infinite; }
+        
+        /* Floating Toggle */
+        #sky-toggle-btn {
+            position: fixed; bottom: 24px; right: 24px; z-index: 10001;
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white; cursor: pointer; pointer-events: auto;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; transition: transform 0.2s, background 0.3s;
+        }
+        #sky-toggle-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
+        @keyframes drift { from { left: -300px; } to { left: 100%; } }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -34,8 +68,9 @@
         }
 
         body {
-            background: linear-gradient(135deg, var(--bg-main) 0%, #06162a 25%, #04241d 50%, #16112c 75%, #060f1e 100%);
-            background-size: 250% 250%;
+            /* Dynamic background controlled by JS — fallback to dark blue */
+            background: linear-gradient(180deg, #02050e 0%, #060f1e 100%);
+            background-size: 100% 100%;
             animation: celestialGradientShift 14s ease-in-out infinite;
             color: var(--text-main);
             min-height: 100vh;
@@ -771,6 +806,14 @@
     </style>
 </head>
 <body>
+    <div id="sky-layer">
+        <button id="sky-toggle-btn" onclick="toggleSky()">☀</button>
+        <div id="clouds-wrap">
+            <div class="cloud type-1" style="top: 10%;"></div>
+            <div class="cloud" style="width: 130px; height: 45px; top: 25%; animation-delay: -10s;"></div>
+        </div>
+    </div>
+
 
     <!-- Islamic Ambient Celestial Background -->
     <div class="islamic-bg-container" id="islamicBg">
@@ -978,6 +1021,64 @@
         </div>
     </div>
 
+    <!-- Edit Station Modal -->
+    <div id="editModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">✏️ Edit Station</div>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <form id="editForm" onsubmit="handleEditSubmit(event)">
+                <input type="hidden" id="editStationId">
+                <div class="form-group">
+                    <label>Station Name</label>
+                    <input type="text" id="editName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editDescription" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Sources (one per line)</label>
+                    <textarea id="editSources" class="form-control" rows="5" required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn" onclick="closeModal('editModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Station Modal -->
+    <div id="editModal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">✏️ Edit Station</div>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <form id="editForm" onsubmit="handleEditSubmit(event)">
+                <input type="hidden" id="editStationId">
+                <div class="form-group">
+                    <label>Station Name</label>
+                    <input type="text" id="editName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editDescription" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Sources (one per line, e.g., local:/app/audio/quran)</label>
+                    <textarea id="editSources" class="form-control" rows="5" required></textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn" onclick="closeModal('editModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Admin Login Modal -->
     <div id="adminModal" class="modal-backdrop">
         <div class="modal-card">
@@ -1108,73 +1209,79 @@
             let container = document.getElementById('stationsGrid');
             let totalListeners = 0;
 
-            let html = '';
-            stationsData.forEach(s => {
-                totalListeners += (s.listeners || 0);
-                let isPlaying = s.id === activePlayingId;
-                let statusBadge = s.status === 'online' 
-                    ? '<span class="badge badge-green">Online</span>'
-                    : (s.status.startsWith('backup') 
-                        ? `<span class="badge badge-gold">Backup #${s.active_source_idx}</span>`
-                        : '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--red);">Offline</span>');
+                let html = '';
+                stationsData.forEach(s => {
+                    totalListeners += (s.listeners || 0);
+                    let isPlaying = s.id === activePlayingId;
+                    let statusBadge = s.status === 'online' 
+                        ? '<span class="badge badge-green">Online</span>'
+                        : (s.status.startsWith('backup') 
+                            ? `<span class="badge badge-gold">Backup #${s.active_source_idx}</span>`
+                            : '<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: var(--red);">Offline</span>');
 
-                let adminStackHtml = '';
-                if (isAdmin) {
-                    let sourcesHtml = s.sources.map((src, idx) => {
-                        let isActive = idx === s.active_source_idx;
-                        return `
-                            <div class="source-item ${isActive ? 'active' : ''}">
-                                <span class="source-name">${idx + 1}. ${src}</span>
-                                <span style="font-size: 10px; opacity: 0.8;">${isActive ? 'Active' : ''}</span>
+                    let adminStackHtml = '';
+                    if (isAdmin) {
+                        let sourcesHtml = s.sources.map((src, idx) => {
+                            let isActive = idx === s.active_source_idx;
+                            return `
+                                <div class="source-item ${isActive ? 'active' : ''}">
+                                    <span class="source-name">${idx + 1}. ${src}</span>
+                                    <span style="font-size: 10px; opacity: 0.8;">${isActive ? 'Active' : ''}</span>
+                                </div>
+                            `;
+                        }).join('');
+
+                        adminStackHtml = `
+                            <div class="source-stack" style="margin-top: 8px;">
+                                <div class="source-header">
+                                    <span>Multi-Source Redundancy Stack</span>
+                                    <span style="color: var(--accent);">Active: #${s.active_source_idx + 1}</span>
+                                </div>
+                                ${sourcesHtml}
                             </div>
                         `;
-                    }).join('');
+                    }
 
-                    adminStackHtml = `
-                        <div class="source-stack" style="margin-top: 8px;">
-                            <div class="source-header">
-                                <span>Multi-Source Redundancy Stack</span>
-                                <span style="color: var(--accent);">Active: #${s.active_source_idx + 1}</span>
+                    html += `
+                        <div class="station-card ${isPlaying ? 'active-playing' : ''}" id="card-${s.id}">
+                            <div>
+                                <div class="card-top">
+                                    <div class="station-info">
+                                        <div class="station-icon">${s.icon || '📻'}</div>
+                                        <div>
+                                            <div class="station-title">${s.name}</div>
+                                            <div class="station-category">${s.category || 'Radio'}</div>
+                                        </div>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                                
+                                <div style="font-size: 11px; color: var(--text-muted); margin: 10px 0;">
+                                    <div style="margin-bottom: 4px;">🎧 المستمعون الآن: <strong>${s.listeners || 0}</strong></div>
+                                    <div style="opacity: 0.8;">📊 إجمالي الاستماع: ${Number(s.all_time_listeners || 240).toLocaleString()}</div>
+                                </div>
+
+                                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">${s.description || ''}</p>
                             </div>
-                            ${sourcesHtml}
+
+                            ${adminStackHtml}
+
+                            <div class="card-actions">
+                                <div class="card-buttons" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    <button class="btn-play" onclick="playStation('${s.id}')">
+                                        ${isPlaying ? '⏸ Pause' : '▶ Play'}
+                                    </button>
+                                    <a href="/listen/${s.id}" class="btn" style="padding: 2px 5px; font-size: 10px;" target="_blank">🔗 Player</a>
+                                    <a href="/station/${s.id}.m3u" class="btn" style="padding: 2px 5px; font-size: 10px;" download>📥 .m3u</a>
+                                    <button class="btn" style="padding: 2px 5px; font-size: 10px;" onclick="copyStreamUrl('${s.id}')">📋 Copy</button>
+                                    ${isAdmin ? `<button class="btn" style="padding: 2px 6px; font-size: 10px;" onclick="editStation('${s.id}')">✏️ Edit</button>
+                                    <button class="btn" style="padding: 2px 6px; font-size: 10px; color: var(--red);" onclick="deleteStation('${s.id}')">🗑 Remove</button>` : ''}
+                                </div>
+                            </div>
                         </div>
                     `;
-                }
+                });
 
-                html += `
-                    <div class="station-card ${isPlaying ? 'active-playing' : ''}" id="card-${s.id}">
-                        <div>
-                            <div class="card-top">
-                                <div class="station-info">
-                                    <div class="station-icon">${s.icon || '📻'}</div>
-                                    <div>
-                                        <div class="station-title">${s.name}</div>
-                                        <div class="station-category">${s.category || 'Radio'}</div>
-                                    </div>
-                                </div>
-                                ${statusBadge}
-                            </div>
-                            <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px; line-height: 1.5;">${s.description || ''}</p>
-                        </div>
-
-                        ${adminStackHtml}
-
-                        <div class="card-actions">
-                            <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-                                🎧 <strong>${s.listeners || 0}</strong> الآن • <span>${Number(s.all_time_listeners || 240).toLocaleString()} إجمالي</span>
-                            </div>
-                            <div class="card-buttons">
-                                <button class="btn-play" onclick="playStation('${s.id}')">
-                                    ${isPlaying ? '⏸ Pause' : '▶ Play'}
-                                </button>
-                                <a href="/listen/${s.id}" class="btn" style="padding: 6px 10px;" target="_blank">🔗 Player</a>
-                                <a href="/station/${s.id}.m3u" class="btn" style="padding: 6px 10px;" download>📥 .m3u</a>
-                                <button class="btn" style="padding: 6px 10px;" onclick="copyStreamUrl('${s.id}')">📋 Copy</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
 
             container.innerHTML = html;
             document.getElementById('statStations').textContent = stationsData.length;
@@ -1206,6 +1313,56 @@
                 });
             }
             renderStations();
+        }
+
+        function editStation(stationId) {
+            let station = stationsData.find(s => s.id === stationId);
+            if (!station) return;
+            document.getElementById('editStationId').value = station.id;
+            document.getElementById('editName').value = station.name;
+            document.getElementById('editDescription').value = station.description || '';
+            document.getElementById('editSources').value = station.sources.join('\n');
+            openModal('editModal');
+        }
+
+        async function handleEditSubmit(e) {
+            e.preventDefault();
+            let id = document.getElementById('editStationId').value;
+            let name = document.getElementById('editName').value;
+            let description = document.getElementById('editDescription').value;
+            let sources = document.getElementById('editSources').value.split('\n').map(s => s.trim()).filter(s => s);
+            
+            try {
+                let res = await fetch(`/api/stations/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description, sources })
+                });
+                if (res.ok) {
+                    closeModal('editModal');
+                    fetchStations();
+                } else {
+                    let d = await res.json();
+                    alert('Error: ' + d.detail);
+                }
+            } catch (err) {
+                alert('Error: ' + err);
+            }
+        }
+
+        async function deleteStation(stationId) {
+            if (!confirm('Are you sure you want to remove this station?')) return;
+            try {
+                let res = await fetch(`/api/stations/${stationId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    fetchStations();
+                } else {
+                    let d = await res.json();
+                    alert('Error: ' + d.detail);
+                }
+            } catch (err) {
+                alert('Error: ' + err);
+            }
         }
 
         function copyStreamUrl(stationId) {
@@ -1473,23 +1630,23 @@
                 starOpacity = 0.95;
             } else if (hour >= 4.5 && hour < 6.5) {
                 // Fajr / Dawn
-                bg1 = "#050e18";
-                bg2 = "#122428";
+                bg1 = "#0e1c2e";
+                bg2 = "#1a3a4d";
                 starOpacity = 0.65;
             } else if (hour >= 6.5 && hour < 11.5) {
                 // Duha / Morning
-                bg1 = "#021813";
-                bg2 = "#052c22";
+                bg1 = "#112d4e";
+                bg2 = "#1e5f74";
                 starOpacity = 0.35;
             } else if (hour >= 11.5 && hour < 17.5) {
                 // Dhuhr & Asr
-                bg1 = "#031c15";
-                bg2 = "#062a20";
-                starOpacity = 0.35;
+                bg1 = "#1e3a8a";
+                bg2 = "#3b82f6";
+                starOpacity = 0.28;
             } else {
                 // Maghrib & Isha
-                bg1 = "#080718";
-                bg2 = "#120e24";
+                bg1 = "#312e81";
+                bg2 = "#4f46e5";
                 starOpacity = 0.85;
             }
 
@@ -1686,6 +1843,10 @@
         fetchNewQuote();
         setInterval(fetchNewQuote, 300000);
 
+        // Apply hour theme immediately and every minute
+        applyHourTheme();
+        setInterval(applyHourTheme, 60000);
+
         // Version badge: detect new edits released by the station owner
         (function loadVersionBadge() {
             const badge = document.getElementById("footerVersion");
@@ -1698,6 +1859,29 @@
                 })
                 .catch(() => { badge.textContent = ""; });
         })();
+
+        // Sky Mode Management
+        window.setSkyMode = (isDay) => {
+            const body = document.body;
+            const toggleBtn = document.getElementById('sky-toggle-btn');
+            
+            if (isDay) {
+                body.classList.add('day-mode');
+                if (toggleBtn) toggleBtn.textContent = '☾';
+            } else {
+                body.classList.remove('day-mode');
+                if (toggleBtn) toggleBtn.textContent = '☀';
+            }
+        };
+        
+        window.toggleSky = () => {
+            const isDay = document.body.classList.contains('day-mode');
+            window.setSkyMode(!isDay);
+        };
+
+        const h = new Date().getHours();
+        window.setSkyMode(h >= 6 && h < 18);
+
     </script>
 </body>
 </html>
