@@ -46,6 +46,7 @@
       "icon": "📖",
       "sources": [
         "https://qurango.net/radio/mohammed_siddiq_alminshawi",
+        "archive:c_202506vvv",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
@@ -59,6 +60,7 @@
       "icon": "📖",
       "sources": [
         "https://qurango.net/radio/mahmoud_khalil_alhussary",
+        "archive:4752475475425724572457245742727636236",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
