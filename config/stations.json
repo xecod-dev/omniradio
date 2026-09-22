@@ -93,6 +93,19 @@
       "bitrate": 128
     },
     {
+      "id": "ammar-almulla",
+      "name": "الشيخ عمار الملا",
+      "name_en": "Sheikh Ammar Al-Mulla",
+      "category": "Quran Recitations",
+      "description": "تلاوات عطرة ومميزة بصوت الشيخ عمار الملا",
+      "icon": "📖",
+      "sources": [
+        "archive:Ammar-Almulla",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
       "id": "local-library",
       "name": "المكتبة الصوتية والملفات المرفوعة",
       "name_en": "Islamic Audio Library (Uploads)",
