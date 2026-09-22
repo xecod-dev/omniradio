@@ -861,26 +861,23 @@
         /* Azkar merged into the station icon (art-box) */
         .azkar-overlay {
             position: absolute;
-            bottom: 6px;
+            bottom: 5px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             align-items: center;
             gap: 5px;
-            background: rgba(5, 12, 8, 0.85);
-            border: 1px solid rgba(223, 183, 108, 0.45);
+            background: rgba(5, 12, 8, 0.88);
+            border: 1px solid rgba(223, 183, 108, 0.5);
             color: var(--accent);
             border-radius: 999px;
-            padding: 3px 9px;
-            font-size: 9.5px;
+            padding: 4px 12px;
+            font-size: 11px;
             font-weight: 700;
             white-space: nowrap;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
             cursor: pointer;
             pointer-events: none;
-            max-width: calc(100% - 12px);
-            overflow: hidden;
-            text-overflow: ellipsis;
             transition: background 0.3s, border-color 0.3s;
             z-index: 2;
             font-family: inherit;
@@ -891,20 +888,18 @@
             border-color: var(--theme-accent);
         }
         #azkarText {
-            overflow: hidden;
-            text-overflow: ellipsis;
             white-space: nowrap;
         }
         #azkarCount {
-            font-size: 9px;
+            font-size: 10px;
             color: var(--accent);
-            opacity: 0.85;
-            font-weight: 600;
+            opacity: 0.9;
+            font-weight: 700;
             direction: ltr;
-            background: rgba(223, 183, 108, 0.15);
+            background: rgba(223, 183, 108, 0.17);
             border-radius: 999px;
-            padding: 0 5px;
-            min-width: 15px;
+            padding: 0 6px;
+            min-width: 17px;
             text-align: center;
         }
 
