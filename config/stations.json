@@ -119,6 +119,19 @@
       "bitrate": 128
     },
     {
+      "id": "ahmad-tamim",
+      "name": "الشيخ أحمد تميم المراغي",
+      "name_en": "Sheikh Ahmad Tamim Al-Maraghi",
+      "category": "Quran Recitations",
+      "description": "تلاوات الشيخ أحمد تميم المراغي بجودة عالية",
+      "icon": "📖",
+      "sources": [
+        "archive:Ahmad-Tamim-Maraghi-High-Quality",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
       "id": "local-library",
       "name": "المكتبة الصوتية والملفات المرفوعة",
       "name_en": "Islamic Audio Library (Uploads)",
