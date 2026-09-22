@@ -1918,13 +1918,19 @@
                 canvas.width = W;
                 canvas.height = H;
                 const ctx = canvas.getContext('2d');
-                const GOLD = 'rgba(212, 175, 55, ';
 
-                // Background: deep night gradient with subtle gold glow
+                // ---- Randomized complementary palette (new every render) ----
+                const hue = Math.floor(Math.random() * 360);            // background hue
+                const accentHue = (hue + 165 + Math.floor(Math.random() * 40)) % 360; // ~complement
+                const hueBg = (h, s, l) => `hsl(${h}, ${s}%, ${l}%)`;
+                const GOLD = `hsla(${accentHue}, 72%, ${56 + Math.floor(Math.random() * 10)}%, `; // prefix, alpha appended
+                const TEXT = hueBg(accentHue, 42, 91);                  // warm cream tinted by accent
+
+                // Background: deep gradient in the randomized hue
                 const bg = ctx.createRadialGradient(W / 2, H / 2, 80, W / 2, H / 2, W * 0.75);
-                bg.addColorStop(0, '#0d1f16');
-                bg.addColorStop(0.55, '#07140d');
-                bg.addColorStop(1, '#020604');
+                bg.addColorStop(0, hueBg(hue, 46, 13));
+                bg.addColorStop(0.55, hueBg(hue, 48, 8));
+                bg.addColorStop(1, 'hsl(0, 0%, 3%)');
                 ctx.fillStyle = bg;
                 ctx.fillRect(0, 0, W, H);
 
@@ -2064,7 +2070,7 @@
                 ctx.restore();
 
                 // Quote text (centered in the panel)
-                ctx.fillStyle = '#f3e9d2';
+                ctx.fillStyle = TEXT;
                 ctx.font = fontOk ? `700 ${fontPx}px "Amiri", "Scheherazade New", serif` : `700 ${fontPx}px serif`;
                 ctx.direction = 'rtl';
                 let y = panelTop + 70;
