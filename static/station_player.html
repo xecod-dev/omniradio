@@ -26,7 +26,7 @@
         }
 
         /* Interactive elements: no text selection, no double-tap delay (mobile tap UX) */
-        button, .azkar-chip, .art-box, select, a, .station-switcher select, [onclick] {
+        button, .azkar-chip, select, a, .station-switcher select, [onclick] {
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
@@ -369,93 +369,26 @@
             color: rgba(255, 255, 255, 0.25);
         }
 
-        /* --- Identity Row: artwork + station meta --- */
-        .card-identity {
+        /* --- Azkar chip row (centered, below listeners badge) --- */
+        .azkar-row {
             display: flex;
-            align-items: center;
-            gap: 14px;
-            text-align: right;
-            direction: rtl;
-            padding: 0 2px;
-        }
-
-        .identity-left {
-            flex: 0 0 auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 7px;
-        }
-
-        .art-box {
-            flex: 0 0 auto;
-            width: 88px;
-            height: 88px;
-            background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02));
-            border: 1.5px solid rgba(255, 255, 255, 0.14);
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45), 0 0 22px var(--theme-glow);
-            border-radius: 22px;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 44px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .art-box:hover {
-            border-color: var(--theme-accent);
-        }
-
-        .art-box:active {
-            transform: scale(0.97);
-        }
-
-        .art-box.playing {
-            border-color: var(--theme-accent);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 34px var(--theme-glow);
-        }
-
-        .station-meta {
-            flex: 1 1 auto;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .station-name {
-            font-size: 17px;
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.3;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .station-category {
-            font-size: 11.5px;
-            color: var(--theme-accent);
-            font-weight: 700;
-        }
-
-        .station-desc {
-            font-size: 11.5px;
-            color: #94a3b8;
-            line-height: 1.5;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            margin: 4px 0 12px;
         }
 
         /* Channel switcher dropdown (top of player card) */
         .station-switcher {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
             margin-bottom: 12px;
+        }
+        .switcher-title {
+            color: #e2e8f0;
+            font-size: 13px;
+            font-weight: 700;
+            opacity: 0.85;
         }
         .station-switcher select {
             width: 100%;
@@ -1137,9 +1070,6 @@
         /* Very short viewports: let the card scroll internally, never clip.
            The quote text is never clamped — it always shows in full. */
         @media (max-height: 620px) {
-            .station-desc {
-                display: none;
-            }
             .quote-text {
                 min-height: 0;
             }
@@ -1214,6 +1144,7 @@
 
             <!-- Station switcher dropdown (top of card) -->
             <div class="station-switcher">
+                <label class="switcher-title" for="stationSwitcher">اختر المحطة</label>
                 <select id="stationSwitcher" onchange="switchStation(this.value)" aria-label="تغيير المحطة">
                 </select>
             </div>
@@ -1230,23 +1161,13 @@
                 </span>
             </div>
 
-            <!-- Station Identity: artwork + name -->
-            <div class="card-identity">
-                <div class="identity-left">
-                    <div class="art-box" id="artBox" onclick="azkarTap()" title="اضغط للذكر">
-                        {{STATION_ICON}}
-                    </div>
-                    <span class="azkar-chip" id="azkarBtn" onclick="azkarTap()" title="اضغط للذكر">
-                        <span>✨</span>
-                        <span id="azkarText">سبحان الله</span>
-                        <span id="azkarCount">٠</span>
-                    </span>
-                </div>
-                <div class="station-meta">
-                    <h1 class="station-name">{{STATION_NAME}}</h1>
-                    <div class="station-category">{{STATION_CATEGORY}}</div>
-                    <p class="station-desc">{{STATION_DESC}}</p>
-                </div>
+            <!-- Azkar chip (centered; tap to count) -->
+            <div class="azkar-row">
+                <span class="azkar-chip" id="azkarBtn" onclick="azkarTap()" title="اضغط للذكر">
+                    <span>✨</span>
+                    <span id="azkarText">سبحان الله</span>
+                    <span id="azkarCount">٠</span>
+                </span>
             </div>
 
             <!-- Controls: play button + visualizer + volume -->
@@ -1347,7 +1268,6 @@
         const audio = document.getElementById('audioStream');
         const playBtn = document.getElementById('playBtn');
         const playIcon = document.getElementById('playIcon');
-        const artBox = document.getElementById('artBox');
         const visualizer = document.getElementById('visualizer');
         const volIcon = document.getElementById('volIcon');
         const volSlider = document.getElementById('volSlider');
@@ -1367,11 +1287,8 @@
             }
         }
 
-        /* Show a clear Quran icon for Quran stations (art box is static, no animation) */
-        (function applyStationIcon() {
-            const isQuran = /qura|quran|تلاوة|قرآن/i.test(stationCategory) || /quran|abdulbasit|minshawi|hussary|afasi/i.test(stationId);
-            if (isQuran && artBox) artBox.textContent = "📖";
-        })();
+        /* Station icon no longer displayed: station identity moved into the
+           channel switcher dropdown (see initStationSwitcher). */
 
         /* Current date on top of the screen (Gregorian + Hijri) */
         function renderTopDate() {
@@ -1653,14 +1570,15 @@
 
         function updateUI(playing) {
             const bg = document.getElementById('islamicBg');
+            const artBox = document.getElementById('artBox');
             if (playing) {
                 playIcon.textContent = "⏸";
-                artBox.classList.add('playing');
+                if (artBox) artBox.classList.add('playing');
                 visualizer.classList.add('active');
                 if (bg) bg.classList.add('playing-active');
             } else {
                 playIcon.textContent = "▶";
-                artBox.classList.remove('playing');
+                if (artBox) artBox.classList.remove('playing');
                 visualizer.classList.remove('active');
                 if (bg) bg.classList.remove('playing-active');
             }
@@ -2251,7 +2169,6 @@
             let saving = false;
 
             const overlay = document.getElementById('azkarBtn');
-            const artBox = document.getElementById('artBox');
             const textEl = document.getElementById('azkarText');
             const countEl = document.getElementById('azkarCount');
             if (!textEl || !countEl) return;
