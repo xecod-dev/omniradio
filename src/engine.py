@@ -236,9 +236,13 @@ class StationRelay:
             logger.info(f"[{self.station_id}] Connecting to source #{self.active_source_idx}: {current_source}")
             self.status = "online" if self.active_source_idx == 0 else f"backup_{self.active_source_idx}"
 
-            cmd = self._build_ffmpeg_cmd(current_source)
-            
             try:
+                # Build the ffmpeg command. This can raise (e.g. an archive.org
+                # metadata fetch failure) — it must trigger failover, NOT kill
+                # the relay loop (previously it was outside the try, so a
+                # transient network error left the station 'online' with no
+                # audio forever).
+                cmd = self._build_ffmpeg_cmd(current_source)
                 # Launch ffmpeg process in async executor to not block the event loop
                 self._ffmpeg_proc = subprocess.Popen(
                     cmd,
@@ -247,8 +251,8 @@ class StationRelay:
                     bufsize=CHUNK_SIZE * 8
                 )
             except Exception as e:
-                logger.error(f"[{self.station_id}] Failed to spawn ffmpeg: {e}")
-                await self._trigger_failover(f"Spawn error: {e}")
+                logger.error(f"[{self.station_id}] Source failed to start ({current_source}): {e}")
+                await self._trigger_failover(f"Source start error: {e}")
                 await asyncio.sleep(1)
                 continue
 
@@ -354,8 +358,16 @@ class StationRelay:
         loop = asyncio.get_running_loop()
         def _check():
             try:
+                # archive.org sources: the actual "stream" is a concat playlist
+                # of item MP3s, so the right liveness probe is the item metadata
+                # endpoint, not treating the raw identifier as a URL.
+                if url.startswith("archive:"):
+                    identifier = url[8:].strip()
+                    probe_url = f"https://archive.org/metadata/{identifier}"
+                else:
+                    probe_url = url
                 req = urllib.request.Request(
-                    url,
+                    probe_url,
                     headers={"User-Agent": "OmniRadio-HealthCheck/1.0"}
                 )
                 with urllib.request.urlopen(req, timeout=5) as response:
