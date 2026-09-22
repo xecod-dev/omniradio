@@ -80,6 +80,19 @@
     },
 
     {
+      "id": "albanna",
+      "name": "الشيخ محمود علي البنا",
+      "name_en": "Sheikh Mahmoud Ali Al-Banna",
+      "category": "Quran Recitations",
+      "description": "المصحف المرتل برواية حفص عن عاصم بصوت الشيخ محمود علي البنا",
+      "icon": "📖",
+      "sources": [
+        "archive:albanna-1411kb-cairo-sound-wave-morattal",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
+    },
+    {
       "id": "local-library",
       "name": "المكتبة الصوتية والملفات المرفوعة",
       "name_en": "Islamic Audio Library (Uploads)",
