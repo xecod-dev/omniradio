@@ -495,10 +495,14 @@ def _aladhan_get(url: str) -> Optional[dict]:
         return None
 
 def _aladhan_timings(lat: float, lng: float, api_date: str, tz: str) -> Optional[dict]:
-    """Return a normalized prayer-times payload for coordinates."""
+    """Return a normalized prayer-times payload for coordinates.
+
+    method=5 = Egyptian General Authority of Survey (correct for Egypt;
+    method=2 ISNA is a North American method and shifts Isha ~12 min early).
+    """
     payload = _aladhan_get(
         f"https://api.aladhan.com/v1/timings/{api_date}"
-        f"?latitude={lat}&longitude={lng}&method=2&timezonestring={tz}"
+        f"?latitude={lat}&longitude={lng}&method=5&timezonestring={tz}"
     )
     if not payload or "data" not in payload:
         return None
@@ -542,13 +546,28 @@ async def api_prayer_times(
     if lat == 0 and lng == 0 and city:
         result = _aladhan_get(
             f"https://api.aladhan.com/v1/timingsByCity/{api_date}"
-            f"?city={city}&country={country or 'Egypt'}&method=2"
+            f"?city={city}&country={country or 'Egypt'}&method=5"
         )
         if result and "data" in result:
             data = result["data"]
             raw = data.get("timings", {})
             hijri = data.get("date", {}).get("hijri", {})
             meta = data.get("meta", {})
+            # Aladhan's city lookup sometimes returns a bogus fallback
+            # (8.8888888 / 7.7777777). Hide it when it is not plausible,
+            # e.g. the exact fallback pair or anything far from reality.
+            lat_out, lng_out = None, None
+            try:
+                m_lat = float(meta.get("latitude", 0))
+                m_lng = float(meta.get("longitude", 0))
+                plausible = (
+                    -90 <= m_lat <= 90 and -180 <= m_lng <= 180
+                    and not (abs(m_lat - 8.8888888) < 0.01 and abs(m_lng - 7.7777777) < 0.01)
+                )
+                if plausible:
+                    lat_out, lng_out = round(m_lat, 4), round(m_lng, 4)
+            except (TypeError, ValueError):
+                pass
             result = {
                 "date": data.get("date", {}).get("readable", ""),
                 "hijri": f"{hijri.get('day', '')} {hijri.get('month', {}).get('ar', '')} {hijri.get('year', '')} هـ",
@@ -557,8 +576,8 @@ async def api_prayer_times(
                     for key in PRAYER_NAMES_AR if raw.get(key)
                 },
                 "timezone": meta.get("timezone", ""),
-                "latitude": round(float(meta.get("latitude", 0)), 4),
-                "longitude": round(float(meta.get("longitude", 0)), 4),
+                "latitude": lat_out,
+                "longitude": lng_out,
             }
         else:
             return {"error": "تعذر جلب أوقات الصلاة لهذه المدينة"}

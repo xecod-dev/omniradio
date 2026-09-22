@@ -272,6 +272,20 @@
             overflow: hidden;
             text-overflow: ellipsis;
             direction: rtl;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* Compact moon beside the header date (shown on mobile only;
+           on desktop the large floating background moon remains) */
+        .top-moon {
+            display: none;
+            font-size: 13px;
+            line-height: 1;
+            filter: drop-shadow(0 0 6px rgba(255, 235, 170, 0.6));
+            pointer-events: none;
         }
 
         #prayer-toggle {
@@ -1043,12 +1057,13 @@
            Responsive refinements
            ========================================= */
         @media (max-width: 640px) {
+            /* Mobile: the moon moves out of the background into the header
+               (beside the date) — hide the large floating background moon. */
             .hijri-moon-wrap {
-                top: 54px;
-                left: 10px;
+                display: none;
             }
-            .moon-svg-box {
-                transform: scale(0.78);
+            .top-moon {
+                display: inline-block;
             }
             .subtle-star-wrap {
                 width: 340px;
@@ -1128,9 +1143,11 @@
         </div>
     </div>
 
-    <!-- Compact Header: date + prayer tab -->
+    <!-- Compact Header: moon + date + prayer tab -->
     <header>
-        <div class="top-date" id="topDate" title="التاريخ اليوم">—</div>
+        <div class="top-date" id="topDate" title="التاريخ اليوم">
+            <span class="top-moon" id="topMoon" title="مرحلة القمر">🌙</span><span id="topDateText">—</span>
+        </div>
         <button id="prayer-toggle" title="أوقات الصلاة">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
             <span>أوقات الصلاة</span>
@@ -1307,7 +1324,15 @@
             } catch (e) {
                 hijri = getHijriDateInfo().formattedDate;
             }
-            el.textContent = `${greg} • ${hijri}`;
+            const txtEl = document.getElementById('topDateText');
+            if (txtEl) {
+                txtEl.textContent = `${greg} • ${hijri}`;
+                // Keep the moon's phase title in sync with the date
+                const moonEl = document.getElementById('topMoon');
+                if (moonEl) {
+                    moonEl.title = `${greg} • ${hijri}`;
+                }
+            }
             el.title = `${greg} • ${hijri}`;
         }
 
@@ -2404,8 +2429,14 @@
             let timingsData = null;
             if (!toggle) return;
 
-            // Resolve location: explicit URL params → browser geolocation → IP fallback → Cairo
-            function getPrayerQuery() {
+            // Resolve location: explicit URL params → Cairo (default).
+// Browser/IP geolocation is intentionally NOT used anymore — it resolved to
+// nearby cities (e.g. Zagazig) and gave wrong "location" labels; this station
+// is Cairo-based, so Cairo times are the correct default.
+// Resolve location: explicit URL params → browser GPS → IP → Cairo (final fallback).
+// Not hardcoded: the prayer panel follows the real listener location when possible;
+// Cairo is ONLY the last-resort default (this station is Cairo Quran Radio).
+function getPrayerQuery() {
                 return new Promise(resolve => {
                     const url = new URL(window.location.href);
                     const has = k => url.searchParams.get(k);
@@ -2414,7 +2445,12 @@
                         return;
                     }
                     const params = new URLSearchParams();
-                    const resolveCairo = () => { params.set('city', 'Cairo'); params.set('country', 'Egypt'); resolve({ query: params.toString(), cityLabel: 'القاهرة' }); };
+                    const resolveCairo = () => {
+                        params.set('city', 'Cairo');
+                        params.set('country', 'Egypt');
+                        params.set('tz', 'Africa/Cairo');
+                        resolve({ query: params.toString(), cityLabel: 'القاهرة' });
+                    };
                     const ipFallback = () => {
                         fetch('https://ipapi.co/json/')
                             .then(r => r.ok ? r.json() : Promise.reject())
@@ -2433,12 +2469,15 @@
                     };
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(pos => {
-                            params.set('lat', pos.coords.latitude.toFixed(6));
-                            params.set('lng', pos.coords.longitude.toFixed(6));
-                            // Try to also get a human-readable place name (IP-based, same visitor)
-                            fetch('https://ipapi.co/json/')
+                            const lat = pos.coords.latitude.toFixed(6);
+                            const lng = pos.coords.longitude.toFixed(6);
+                            params.set('lat', lat);
+                            params.set('lng', lng);
+                            // Reverse-geocode the GPS position for a friendly label
+                            // (keeps coordinates exact; label is cosmetic only).
+                            fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ar`)
                                 .then(r => r.ok ? r.json() : Promise.reject())
-                                .then(d => resolve({ query: params.toString(), cityLabel: d.city || '' }))
+                                .then(d => resolve({ query: params.toString(), cityLabel: d.city || d.locality || d.principalSubdivision || '' }))
                                 .catch(() => resolve({ query: params.toString(), cityLabel: '' }));
                         }, ipFallback, { timeout: 6000, maximumAge: 600000 });
                     } else {
