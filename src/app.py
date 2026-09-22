@@ -92,7 +92,12 @@ def get_base_url(request: Request) -> str:
         
     return f"{forwarded_proto}://{forwarded_host}{path_prefix}".rstrip("/")
 
-@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root_default_redirect(request: Request):
+    """Default entry point: opens the primary Quran Cairo player."""
+    return RedirectResponse(url="/listen/quran-cairo", status_code=302)
+
+@app.api_route("/dashboard", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
     """Serves the single-page web dashboard."""
     static_file = Path("/app/static/dashboard.html")
@@ -416,7 +421,7 @@ async def api_admin_logout(response: Response):
 @app.get("/admin")
 async def serve_admin_portal():
     """Admin shortcut: opens studio dashboard with admin prompt."""
-    return RedirectResponse(url="/?admin=true", status_code=302)
+    return RedirectResponse(url="/dashboard?admin=true", status_code=302)
 
 # ==================== API Endpoints ====================
 
