@@ -106,6 +106,7 @@
       "icon": "📖",
       "sources": [
         "archive:Ammar-Almulla",
+        "local:/app/audio/cache/ammar-almulla",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
@@ -133,6 +134,7 @@
       "icon": "📖",
       "sources": [
         "archive:Ahmad-Tamim-Maraghi-High-Quality",
+        "local:/app/audio/cache/ahmad-tamim",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
