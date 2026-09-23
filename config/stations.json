@@ -144,11 +144,12 @@
       "name": "المكتبة الصوتية والملفات المرفوعة",
       "name_en": "Islamic Audio Library (Uploads)",
       "category": "Islamic Library",
-      "description": "مكتبة الدروس والتلاوات المرفوعة عبر الويب أو FTP",
+      "description": "مكتبة شاملة تبث تلاوات وملفات عشوائياً من كافة المحطات والمكتبة المحلية",
       "icon": "📁",
       "sources": [
+        "local:/app/audio",
         "local:/app/audio/uploads",
-        "local:/app/audio/quran"
+        "local:/app/audio/cache"
       ],
       "bitrate": 128
     }

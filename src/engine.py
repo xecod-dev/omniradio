@@ -204,16 +204,20 @@ class StationRelay:
                     "-f", "mp3", "pipe:1"
                 ]
             else:
-                # Create a concat playlist for multiple files
+                # Create a concat playlist for multiple files.
+                # Shuffle order randomly so every station restart / loop plays in randomized order
+                playlist_files = list(audio_files)
+                random.shuffle(playlist_files)
                 concat_list_file = f"/tmp/playlist_{self.station_id}.txt"
                 try:
                     with open(concat_list_file, "w", encoding="utf-8") as f:
-                        for af in audio_files:
+                        for af in playlist_files:
                             safe_p = af.replace("'", "'\\''")
                             f.write(f"file '{safe_p}'\n")
                 except Exception as e:
                     logger.error(f"Failed to write concat file: {e}")
                 
+                logger.info(f"[{self.station_id}] Local playlist built with {len(playlist_files)} files (shuffled) -> {concat_list_file}")
                 return [
                     "ffmpeg", "-re", "-f", "concat", "-safe", "0",
                     "-stream_loop", "-1",

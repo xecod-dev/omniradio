@@ -73,7 +73,9 @@ class AudioManager:
         audio_files = []
         for file_path in sorted(p.rglob("*")):
             if file_path.is_file() and file_path.suffix.lower() in AUDIO_EXTENSIONS:
-                audio_files.append(str(file_path))
+                # Exclude standby chime from regular audio scans unless it's the only option
+                if file_path.name != "standby_chime.mp3":
+                    audio_files.append(str(file_path))
 
         if not audio_files:
             standby = self.base_dir / "standby_chime.mp3"
