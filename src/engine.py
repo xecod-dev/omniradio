@@ -15,6 +15,8 @@ import urllib.parse
 logger = logging.getLogger("radio.engine")
 
 CHUNK_SIZE = 4096  # 4KB per MP3 frame chunk
+STALL_TIMEOUT_SECONDS = 15  # max silence before a source is considered dead
+READ_TIMEOUT_SECONDS = 5    # per-read watchdog window
 RING_BUFFER_SIZE = 16  # Pre-buffer ~64KB for instant client audio playback
 
 class StationRelay:
@@ -205,6 +207,12 @@ class StationRelay:
                 "ffmpeg", "-re", "-f", "concat", "-safe", "0",
                 "-stream_loop", "-1",
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
+                # Archive.org throttles unknown/default user agents (ffmpeg's
+                # default "Lavf/*" gets a trickle); the OmniRadio UA gets full
+                # speed. Without rw_timeout a stalled download hangs ffmpeg
+                # forever (the stream stalls silently with status "online").
+                "-user_agent", "OmniRadio-Relay/2.0 (Windows Media Player Compatible)",
+                "-rw_timeout", "10000000",
                 "-i", archive_playlist_file,
                 "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
                 "-ar", "44100", "-ac", "2",
@@ -266,9 +274,22 @@ class StationRelay:
 
             # Read stream chunks from ffmpeg stdout
             while self._running and self._ffmpeg_proc and self._ffmpeg_proc.poll() is None:
+                # Stall watchdog: if no data has arrived for STALL_TIMEOUT_SECONDS,
+                # the source is effectively dead (archive.org throttle, hung
+                # concat download, silence from upstream). Break WITHOUT waiting
+                # on another blocking read — otherwise the station reports
+                # "online" with frozen bytes forever.
+                if time.time() - last_data_time > STALL_TIMEOUT_SECONDS:
+                    logger.warning(f"[{self.station_id}] Source stall detected ({STALL_TIMEOUT_SECONDS}s no data) from {current_source}")
+                    break
                 try:
-                    # Non-blocking read chunk in worker thread
-                    chunk = await loop.run_in_executor(None, self._ffmpeg_proc.stdout.read, CHUNK_SIZE)
+                    # Non-blocking read chunk in worker thread, wrapped in a
+                    # per-read watchdog so a single hung read cannot hang the
+                    # whole loop (stdout.read may block past the stall timeout).
+                    chunk = await asyncio.wait_for(
+                        loop.run_in_executor(None, self._ffmpeg_proc.stdout.read, CHUNK_SIZE),
+                        timeout=READ_TIMEOUT_SECONDS
+                    )
                     if not chunk:
                         # Stream ended or closed
                         logger.warning(f"[{self.station_id}] Stream EOF received from {current_source}")
@@ -298,6 +319,11 @@ class StationRelay:
                     for dead in dead_subscribers:
                         self.subscribers.discard(dead)
 
+                except asyncio.TimeoutError:
+                    # A single read blocked for READ_TIMEOUT_SECONDS — the
+                    # source is stalled; break so the stall/failover path runs.
+                    logger.warning(f"[{self.station_id}] Read timeout on stream from {current_source}")
+                    break
                 except Exception as e:
                     logger.warning(f"[{self.station_id}] Read error on stream: {e}")
                     break
