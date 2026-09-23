@@ -15,8 +15,13 @@ import urllib.parse
 logger = logging.getLogger("radio.engine")
 
 CHUNK_SIZE = 4096  # 4KB per MP3 frame chunk
-STALL_TIMEOUT_SECONDS = 15  # max silence before a source is considered dead
-READ_TIMEOUT_SECONDS = 5    # per-read watchdog window
+# archive.org burst-then-stall rate limiting means a healthy source can
+# legitimately deliver nothing for 10-20s between bursts. These thresholds
+# must be generous enough to ride out throttle windows, but still fail over
+# a truly dead source.
+STALL_TIMEOUT_SECONDS = 25   # cumulative silence before source is dead
+READ_TIMEOUT_SECONDS = 30    # a single hung read is dead; archive.org can
+                             # stall this long between bursts before resuming
 RING_BUFFER_SIZE = 16  # Pre-buffer ~64KB for instant client audio playback
 
 class StationRelay:
@@ -204,7 +209,7 @@ class StationRelay:
                 logger.error(f"[{self.station_id}] Archive.org source failed for '{identifier}': {e}")
                 raise  # failed source -> failover to next source
             return [
-                "ffmpeg", "-re", "-f", "concat", "-safe", "0",
+                "ffmpeg", "-f", "concat", "-safe", "0",
                 "-stream_loop", "-1",
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
                 "-i", archive_playlist_file,
@@ -278,8 +283,12 @@ class StationRelay:
                     break
                 try:
                     # Non-blocking read chunk in worker thread, wrapped in a
-                    # per-read watchdog so a single hung read cannot hang the
-                    # whole loop (stdout.read may block past the stall timeout).
+                    # generous hung-read backstop. NOTE: no -re on archive
+                    # concat, so ffmpeg runs ahead and fills the pipe buffer
+                    # as fast as the source delivers — the first chunk arrives
+                    # promptly (a -re pacing would block-buffer ~5s+ before
+                    # ffmpeg writes the first bytes to the pipe, which broke
+                    # every archive station's first read).
                     chunk = await asyncio.wait_for(
                         loop.run_in_executor(None, self._ffmpeg_proc.stdout.read, CHUNK_SIZE),
                         timeout=READ_TIMEOUT_SECONDS
@@ -376,17 +385,31 @@ class StationRelay:
         return False
 
     async def _run_primary_recovery_checker(self):
-        """Periodically tests primary (source 0) if currently running on a backup source."""
+        """Periodically tests primary (source 0) if currently running on a backup source.
+
+        Uses exponential backoff (60s -> 120s -> 240s -> ... -> cap 10min) on
+        consecutive failed probes so we don't hammer archive.org every 60s
+        while it is in a burst-then-stall rate-limit phase. Probe success
+        resets the interval back to 60s.
+        """
+        interval = 60
+        consecutive_failures = 0
         while self._running:
-            await asyncio.sleep(60)  # Check every 60 seconds
+            await asyncio.sleep(interval)
             if self.active_source_idx > 0 and len(self.sources) > 1:
                 primary_source = self.sources[0]
                 if not primary_source.startswith("local:"):
                     # Test primary URL connectivity
                     is_alive = await self._test_stream_connectivity(primary_source)
                     if is_alive:
+                        consecutive_failures = 0
+                        interval = 60
                         logger.info(f"[{self.station_id}] Primary source {primary_source} is back ONLINE! Recovering to primary...")
                         await self.switch_source(0)
+                    else:
+                        consecutive_failures += 1
+                        interval = min(60 * (2 ** consecutive_failures), 600)
+                        logger.info(f"[{self.station_id}] Primary source {primary_source} still down (probe #{consecutive_failures}); next check in {interval}s")
 
     async def _test_stream_connectivity(self, url: str) -> bool:
         """Tests if a remote stream URL responds with 200/302 and audio content."""
