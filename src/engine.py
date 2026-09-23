@@ -207,14 +207,6 @@ class StationRelay:
                 "ffmpeg", "-re", "-f", "concat", "-safe", "0",
                 "-stream_loop", "-1",
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
-                # Archive.org throttles unknown/default user agents (ffmpeg's
-                # default "Lavf/*" gets a trickle); the OmniRadio UA gets full
-                # speed. rw_timeout must be generous: archive.org rate-limits
-                # concurrent downloads from one IP, so a throttled connection
-                # can take >10s to deliver its first byte — a tight timeout
-                # kills the stream before it starts.
-                "-user_agent", "OmniRadio-Relay/2.0 (Windows Media Player Compatible)",
-                "-rw_timeout", "30000000",
                 "-i", archive_playlist_file,
                 "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
                 "-ar", "44100", "-ac", "2",
