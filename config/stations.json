@@ -2,11 +2,16 @@
   "server": {
     "name": "OmniRadio Islamic Studio",
     "port": 9000,
-    "admin_password": "",
+    "admin_password": "XI22MEIoFdUTfFMsSiM3",
     "ftp_port": 2121,
-    "ftp_pasv_ports": [2122, 2123, 2124, 2125],
-    "ftp_user": "",
-    "ftp_password": ""
+    "ftp_pasv_ports": [
+      2122,
+      2123,
+      2124,
+      2125
+    ],
+    "ftp_user": "radio",
+    "ftp_password": "XI22MEIoFdUTfFMsSiM3"
   },
   "stations": [
     {
@@ -78,7 +83,6 @@
       ],
       "bitrate": 128
     },
-
     {
       "id": "albanna",
       "name": "الشيخ محمود علي البنا",
