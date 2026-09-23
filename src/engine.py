@@ -44,6 +44,10 @@ class StationRelay:
         self._relay_task: Optional[asyncio.Task] = None
         self._recovery_task: Optional[asyncio.Task] = None
         self._lock = asyncio.Lock()
+        # When set, the next relay-loop exit was caused by an intentional
+        # switch_source() kill, NOT a source failure — the loop must NOT
+        # trigger_failover() back off of it (else recovery never sticks).
+        self._switch_target: Optional[int] = None
 
     @property
     def name(self) -> str:
@@ -302,6 +306,16 @@ class StationRelay:
             self._kill_ffmpeg()
             
             if self._running:
+                if self._switch_target is not None:
+                    # Intentional switch requested by switch_source() — the
+                    # ffmpeg kill above was the switch mechanism, not a source
+                    # failure. Do NOT failover; just restart the loop on the
+                    # (already updated) active source.
+                    target = self._switch_target
+                    self._switch_target = None
+                    logger.info(f"[{self.station_id}] Switching to source #{target}: {self.active_source}")
+                    await asyncio.sleep(0.5)
+                    continue
                 reason = "Stream ended or stalled" if bytes_received_in_session > 0 else "Connection failed immediately"
                 await self._trigger_failover(reason)
                 # Small backoff before attempting next source
@@ -328,6 +342,7 @@ class StationRelay:
     async def switch_source(self, target_idx: int) -> bool:
         """Manually switches the active source."""
         if 0 <= target_idx < len(self.sources):
+            self._switch_target = target_idx
             self.active_source_idx = target_idx
             self.failover_history.append({
                 "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
