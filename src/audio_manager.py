@@ -58,8 +58,12 @@ class AudioManager:
                 })
         return results
 
-    def get_audio_files_in_folder(self, folder_path: str) -> List[str]:
-        """Returns full paths to all playable audio files inside folder_path."""
+    def get_audio_files_in_folder(self, folder_path: str, min_size_bytes: int = 32768) -> List[str]:
+        """Returns full paths to all playable audio files inside folder_path.
+        
+        Excludes dummy/corrupt files smaller than min_size_bytes (default 32KB)
+        and excludes standby_chime.mp3 from regular directory scans.
+        """
         p = Path(folder_path)
         if not p.is_absolute():
             p = self.base_dir / folder_path.lstrip("/")
@@ -68,6 +72,12 @@ class AudioManager:
             return [str(self.base_dir / "standby_chime.mp3")]
 
         if p.is_file():
+            # If single file is smaller than min_size_bytes, fallback to chime
+            try:
+                if p.stat().st_size < min_size_bytes:
+                    return [str(self.base_dir / "standby_chime.mp3")]
+            except Exception:
+                pass
             return [str(p)]
 
         audio_files = []
@@ -75,7 +85,14 @@ class AudioManager:
             if file_path.is_file() and file_path.suffix.lower() in AUDIO_EXTENSIONS:
                 # Exclude standby chime from regular audio scans unless it's the only option
                 if file_path.name != "standby_chime.mp3":
-                    audio_files.append(str(file_path))
+                    try:
+                        # Guard against 0-byte or tiny ID3-only dummy files
+                        if file_path.stat().st_size >= min_size_bytes:
+                            audio_files.append(str(file_path))
+                        else:
+                            logger.warning(f"Skipping tiny audio file (<{min_size_bytes}B): {file_path}")
+                    except Exception:
+                        pass
 
         if not audio_files:
             standby = self.base_dir / "standby_chime.mp3"

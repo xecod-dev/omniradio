@@ -157,7 +157,11 @@ class StationRelay:
         playlist_file = f"/tmp/archive_{self.station_id}.txt"
         with open(playlist_file, "w", encoding="utf-8") as f:
             for name in names:
-                url = f"https://archive.org/download/{identifier}/{urllib.parse.quote(name)}"
+                # urllib.parse.quote does not escape single quotes by default (safe="/"),
+                # but ffmpeg concat demuxer treats ' as string delimiters inside file '...'.
+                # Percent-encode ' as %27 to prevent syntax errors on archive items with quotes.
+                quoted_name = urllib.parse.quote(name, safe="").replace("'", "%27")
+                url = f"https://archive.org/download/{identifier}/{quoted_name}"
                 f.write(f"file '{url}'\n")
         logger.info(f"[{self.station_id}] Archive playlist for '{identifier}': {len(names)} files, random start -> {playlist_file}")
         return playlist_file
@@ -277,6 +281,11 @@ class StationRelay:
                 "-f", "mp3", "pipe:1"
             ]
 
+    async def _build_ffmpeg_cmd_async(self, source: str) -> List[str]:
+        """Constructs ffmpeg command asynchronously (offloading blocking I/O like archive metadata)."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._build_ffmpeg_cmd, source)
+
     async def _run_relay_loop(self):
         """Main non-blocking relay loop with auto failover."""
         while self._running:
@@ -291,13 +300,10 @@ class StationRelay:
             self.status = "online" if self.active_source_idx == 0 else f"backup_{self.active_source_idx}"
 
             try:
-                # Build the ffmpeg command. This can raise (e.g. an archive.org
-                # metadata fetch failure) — it must trigger failover, NOT kill
-                # the relay loop (previously it was outside the try, so a
-                # transient network error left the station 'online' with no
-                # audio forever).
-                cmd = self._build_ffmpeg_cmd(current_source)
-                # Launch ffmpeg process in async executor to not block the event loop
+                # Build the ffmpeg command. Offloaded to worker thread (ID-018)
+                # so synchronous network calls (e.g. archive.org metadata) never block the event loop.
+                cmd = await self._build_ffmpeg_cmd_async(current_source)
+                # Launch ffmpeg process
                 self._ffmpeg_proc = subprocess.Popen(
                     cmd,
                     stdout=subprocess.PIPE,
