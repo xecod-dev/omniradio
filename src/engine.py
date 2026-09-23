@@ -162,6 +162,29 @@ class StationRelay:
         logger.info(f"[{self.station_id}] Archive playlist for '{identifier}': {len(names)} files, random start -> {playlist_file}")
         return playlist_file
 
+    def _build_mp3quran_playlist(self, base_url: str) -> str:
+        """Write a remote concat playlist for an mp3quran.net mus-haf mirror.
+
+        mp3quran mirrors serve exactly 114 files named 001.mp3..114.mp3 (one per
+        surah) under a reciter base URL like https://server6.mp3quran.net/balilah/.
+        Same streaming approach as archive: no download, ffmpeg concat demuxer
+        pulls each file on demand, -stream_loop -1 replays forever, and the list
+        is cyclically rotated by a random offset so every restart begins at a
+        different surah while keeping surah order contiguous.
+        """
+        base = base_url.rstrip("/") + "/"
+        names = [f"{i:03d}.mp3" for i in range(1, 115)]  # 001..114
+        if len(names) > 1:
+            offset = random.randrange(len(names))
+            names = names[offset:] + names[:offset]
+
+        playlist_file = f"/tmp/mp3quran_{self.station_id}.txt"
+        with open(playlist_file, "w", encoding="utf-8") as f:
+            for name in names:
+                f.write(f"file '{base}{name}'\n")
+        logger.info(f"[{self.station_id}] mp3quran playlist for '{base}': {len(names)} files, random start -> {playlist_file}")
+        return playlist_file
+
     def _build_ffmpeg_cmd(self, source: str) -> List[str]:
         """Constructs ffmpeg command for internet stream, local directory, or single file."""
         bitrate = f"{self.config.get('bitrate', 128)}k"
@@ -213,6 +236,22 @@ class StationRelay:
                 "-stream_loop", "-1",
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
                 "-i", archive_playlist_file,
+                "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
+                "-ar", "44100", "-ac", "2",
+                "-f", "mp3", "pipe:1"
+            ]
+        elif source.startswith("mp3quran:"):
+            # mp3quran.net mirror — stream a full 114-surah mus-haf remotely (no download).
+            # Mirrors (e.g. https://server6.mp3quran.net/balilah/) hold one file per
+            # surah (001.mp3..114.mp3) and do NOT rate-limit like archive.org, so this
+            # is used as a fallback source when archive.org throttles us.
+            base_url = source[len("mp3quran:"):].strip()
+            mp3quran_playlist_file = self._build_mp3quran_playlist(base_url)
+            return [
+                "ffmpeg", "-f", "concat", "-safe", "0",
+                "-stream_loop", "-1",
+                "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
+                "-i", mp3quran_playlist_file,
                 "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
                 "-ar", "44100", "-ac", "2",
                 "-f", "mp3", "pipe:1"
@@ -450,6 +489,20 @@ class StationRelay:
                         # 403/503/429 or empty body => still throttled/alive
                         # 200/206 with audio bytes => usable
                         return fr.getcode() in (200, 206) and len(fr.read(4096)) > 0
+                elif url.startswith("mp3quran:"):
+                    # mp3quran.net mirror: probe the first surah file with a
+                    # strict Range GET (metadata alone doesn't prove audio flows).
+                    base = url[len("mp3quran:"):].strip().rstrip("/") + "/"
+                    probe_url = f"{base}001.mp3"
+                    req = urllib.request.Request(
+                        probe_url,
+                        headers={
+                            "User-Agent": "OmniRadio-HealthCheck/1.0",
+                            "Range": "bytes=0-4095",
+                        }
+                    )
+                    with urllib.request.urlopen(req, timeout=8) as response:
+                        return response.getcode() in (200, 206) and len(response.read(4096)) > 0
                 else:
                     probe_url = url
                     req = urllib.request.Request(

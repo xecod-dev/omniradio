@@ -88,6 +88,7 @@
       "icon": "📖",
       "sources": [
         "archive:albanna-1411kb-cairo-sound-wave-morattal",
+        "mp3quran:https://server8.mp3quran.net/bna/",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
@@ -114,6 +115,7 @@
       "icon": "📖",
       "sources": [
         "archive:rabiea3568356835683568865",
+        "mp3quran:https://server6.mp3quran.net/balilah/",
         "local:/app/audio/quran"
       ],
       "bitrate": 128
