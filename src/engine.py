@@ -225,6 +225,7 @@ class StationRelay:
         elif source.startswith("archive:"):
             # Archive.org item — stream the item's MP3 list remotely (no download).
             # A metadata fetch builds a concat playlist of https://archive.org/download/ URLs.
+            # Use -c:a copy to stream-copy the MP3 frames directly (CPU ~0%, no re-encoding).
             identifier = source[8:].strip()
             try:
                 archive_playlist_file = self._build_archive_playlist(identifier)
@@ -236,8 +237,7 @@ class StationRelay:
                 "-stream_loop", "-1",
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
                 "-i", archive_playlist_file,
-                "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
-                "-ar", "44100", "-ac", "2",
+                "-vn", "-c:a", "copy",
                 "-f", "mp3", "pipe:1"
             ]
         elif source.startswith("mp3quran:"):
@@ -245,6 +245,7 @@ class StationRelay:
             # Mirrors (e.g. https://server6.mp3quran.net/balilah/) hold one file per
             # surah (001.mp3..114.mp3) and do NOT rate-limit like archive.org, so this
             # is used as a fallback source when archive.org throttles us.
+            # Use -c:a copy to stream-copy the MP3 frames directly (CPU ~0%, no re-encoding).
             base_url = source[len("mp3quran:"):].strip()
             mp3quran_playlist_file = self._build_mp3quran_playlist(base_url)
             return [
@@ -252,8 +253,7 @@ class StationRelay:
                 "-stream_loop", "-1",
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
                 "-i", mp3quran_playlist_file,
-                "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
-                "-ar", "44100", "-ac", "2",
+                "-vn", "-c:a", "copy",
                 "-f", "mp3", "pipe:1"
             ]
         else:
@@ -360,6 +360,20 @@ class StationRelay:
 
                     for dead in dead_subscribers:
                         self.subscribers.discard(dead)
+
+                    # Relay loop read pacing (ID-022):
+                    # For non -re sources (archive:, mp3quran:) that download at
+                    # unthrottled line speed, sleep slightly after each chunk to cap
+                    # relay consumption at ~1.5x nominal bitrate (~24 KB/s for 128k).
+                    # This applies backpressure through stdout pipe -> ffmpeg ->
+                    # network socket -> remote server, dropping CPU from 100% to ~0%
+                    # and preventing 20x bandwidth abuse that triggers archive.org rate limits.
+                    # Live streams and local -re sources already produce at <= 1x, so this
+                    # sleep is negligible/harmless for them.
+                    bitrate_kbps = self.config.get('bitrate', 128)
+                    target_bps = (bitrate_kbps * 1000 / 8) * 1.5  # 1.5x headroom
+                    pace_delay = len(chunk) / target_bps
+                    await asyncio.sleep(pace_delay)
 
                 except asyncio.TimeoutError:
                     # A single read blocked for READ_TIMEOUT_SECONDS — the
