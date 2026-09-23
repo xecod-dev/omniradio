@@ -17,6 +17,9 @@ Design:
 
 Usage:
   python3 scripts/sync_archive_cache.py <item_identifier> <station_id> [--dir /home/saas/radio/audio/cache]
+
+NOTE for container runs: pass --dir /app/audio/cache (the volume-mounted path
+inside radio-app). The script default points at the host-side repo path.
 """
 import argparse
 import json
