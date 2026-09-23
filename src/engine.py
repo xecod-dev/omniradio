@@ -209,10 +209,12 @@ class StationRelay:
                 "-protocol_whitelist", "file,http,https,tcp,tls,crypto",
                 # Archive.org throttles unknown/default user agents (ffmpeg's
                 # default "Lavf/*" gets a trickle); the OmniRadio UA gets full
-                # speed. Without rw_timeout a stalled download hangs ffmpeg
-                # forever (the stream stalls silently with status "online").
+                # speed. rw_timeout must be generous: archive.org rate-limits
+                # concurrent downloads from one IP, so a throttled connection
+                # can take >10s to deliver its first byte — a tight timeout
+                # kills the stream before it starts.
                 "-user_agent", "OmniRadio-Relay/2.0 (Windows Media Player Compatible)",
-                "-rw_timeout", "10000000",
+                "-rw_timeout", "30000000",
                 "-i", archive_playlist_file,
                 "-vn", "-c:a", "libmp3lame", "-b:a", bitrate,
                 "-ar", "44100", "-ac", "2",
@@ -399,21 +401,49 @@ class StationRelay:
         loop = asyncio.get_running_loop()
         def _check():
             try:
-                # archive.org sources: the actual "stream" is a concat playlist
-                # of item MP3s, so the right liveness probe is the item metadata
-                # endpoint, not treating the raw identifier as a URL.
                 if url.startswith("archive:"):
                     identifier = url[8:].strip()
-                    probe_url = f"https://archive.org/metadata/{identifier}"
+                    # 1) metadata reachable (playlist can be built)
+                    meta_url = f"https://archive.org/metadata/{identifier}"
+                    req = urllib.request.Request(
+                        meta_url,
+                        headers={"User-Agent": "OmniRadio-HealthCheck/1.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        if response.getcode() not in (200, 206, 302):
+                            return False
+                        meta = json.loads(response.read().decode("utf-8"))
+                    # 2) an actual MP3 in the item downloads audio bytes (not
+                    #    just metadata) — archive.org rate-limits downloads
+                    #    separately from metadata, so metadata 200 is NOT
+                    #    proof the stream will play.
+                    mp3 = next(
+                        (f.get("name") for f in meta.get("files", [])
+                         if f.get("name", "").lower().endswith(".mp3")),
+                        None
+                    )
+                    if not mp3:
+                        return False
+                    file_req = urllib.request.Request(
+                        f"https://archive.org/download/{identifier}/{mp3}",
+                        headers={
+                            "User-Agent": "OmniRadio-HealthCheck/1.0",
+                            "Range": "bytes=0-4095",  # just the first frame
+                        }
+                    )
+                    with urllib.request.urlopen(file_req, timeout=8) as fr:
+                        # 403/503/429 or empty body => still throttled/alive
+                        # 200/206 with audio bytes => usable
+                        return fr.getcode() in (200, 206) and len(fr.read(4096)) > 0
                 else:
                     probe_url = url
-                req = urllib.request.Request(
-                    probe_url,
-                    headers={"User-Agent": "OmniRadio-HealthCheck/1.0"}
-                )
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    code = response.getcode()
-                    return code in (200, 206, 302)
+                    req = urllib.request.Request(
+                        probe_url,
+                        headers={"User-Agent": "OmniRadio-HealthCheck/1.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=5) as response:
+                        code = response.getcode()
+                        return code in (200, 206, 302)
             except Exception:
                 return False
         return await loop.run_in_executor(None, _check)
@@ -441,12 +471,18 @@ class RadioEngine:
 
     async def start(self):
         stations = self.config_manager.get_stations()
-        for s in stations:
+        for i, s in enumerate(stations):
             sid = s.get("id")
             if sid:
                 relay = StationRelay(sid, s, self.audio_manager)
                 self.relays[sid] = relay
                 await relay.start()
+                # Stagger starts so all stations don't open archive.org
+                # connections simultaneously (that triggers per-IP download
+                # rate-limiting: first-byte latencies of 10s+ and 170-byte
+                # responses). 1.5s between relays keeps the fleet healthy.
+                if i < len(stations) - 1:
+                    await asyncio.sleep(1.5)
         logger.info(f"RadioEngine initialized {len(self.relays)} station relays")
 
     async def stop(self):
