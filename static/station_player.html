@@ -5,10 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{STATION_NAME}} • بث مباشر</title>
     <meta name="description" content="{{STATION_DESC}}">
+    <link rel="canonical" href="{{CANONICAL_URL}}">
     <meta property="og:title" content="{{STATION_NAME}}">
     <meta property="og:description" content="{{STATION_DESC}}">
     <meta property="og:type" content="music.radio_station">
-    <meta property="og:url" content="{{PAGE_URL}}">
+    <meta property="og:url" content="{{CANONICAL_URL}}">
+    <meta property="og:site_name" content="OmniRadio — إذاعة القرآن الكريم">
+    <meta property="og:image" content="{{OG_IMAGE}}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:locale" content="ar_EG">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{STATION_NAME}}">
+    <meta name="twitter:description" content="{{STATION_DESC}}">
+    <meta name="twitter:image" content="{{OG_IMAGE}}">
+    <script type="application/ld+json">{{JSONLD_SCHEMA}}</script>
     <style>
         :root {
             --theme-bg1: {{THEME_BG1}};
@@ -23,6 +35,19 @@
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", Helvetica, Arial, sans-serif;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Visually hidden but present for SEO/accessibility (h1) */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         /* Interactive elements: no text selection, no double-tap delay (mobile tap UX) */
@@ -1096,6 +1121,9 @@
     </style>
 </head>
 <body>
+
+    <!-- SEO h1: visible only to crawlers/screen readers — the UI shows the same name as title text -->
+    <h1 class="sr-only">{{STATION_NAME}} — بث مباشر</h1>
 
     <!-- Islamic Ambient Celestial Background -->
     <div class="islamic-bg-container" id="islamicBg">

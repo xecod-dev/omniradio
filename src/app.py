@@ -22,9 +22,14 @@ from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
-APP_VERSION = os.getenv("APP_VERSION", "2.5.0")
+APP_VERSION = os.getenv("APP_VERSION", "2.6.0")
 GIT_SHA = os.getenv("GIT_SHA", "local")
 APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-24")
+
+# Canonical public base URL — the ONE domain search engines / AI engines treat as authoritative.
+# All canonical links, sitemap entries, og:url and JSON-LD identifiers point here so the
+# xecod.com vs serastores.com (/radio prefix) duplicates consolidate into a single entity.
+CANONICAL_BASE = os.getenv("CANONICAL_BASE", "https://radio.xecod.com")
 
 # Configure logging
 logging.basicConfig(
@@ -96,6 +101,55 @@ def get_base_url(request: Request) -> str:
 async def root_default_redirect(request: Request):
     """Default entry point: opens the primary Quran Cairo player."""
     return RedirectResponse(url="/listen/quran-cairo", status_code=302)
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    """Allow crawlers (classic + AI), block only private/admin/stream endpoints."""
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /api/\n"
+        "Disallow: /admin\n"
+        "Disallow: /dashboard\n"
+        "Disallow: /live\n"
+        "Disallow: /station/\n"
+        "Disallow: /playlist.m3u\n"
+        "Disallow: /live.m3u\n"
+        "\n"
+        f"Sitemap: {CANONICAL_BASE}/sitemap.xml\n"
+    )
+
+
+@app.get("/sitemap.xml", response_class=PlainTextResponse)
+async def sitemap_xml():
+    """XML sitemap over canonical listen pages (one entry per station)."""
+    urls = [f"{CANONICAL_BASE}/listen/{s['id']}" for s in engine.get_all_stations_status()]
+    # Root redirect goes to quran-cairo; list the canonical listen URL first.
+    urls = [f"{CANONICAL_BASE}/listen/quran-cairo"] + [u for u in urls if not u.endswith("/listen/quran-cairo")]
+    entries = "\n".join(
+        f"  <url><loc>{u}</loc><changefreq>always</changefreq><priority>0.9</priority></url>"
+        for u in urls
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{entries}\n"
+        "</urlset>\n"
+    )
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204)
+
+
+# Serve /static (og share cards, any future assets) from the volume-mounted directory.
+app.mount(
+    "/static",
+    StaticFiles(directory=Path(__file__).parent.parent / "static"),
+    name="static",
+)
 
 @app.api_route("/dashboard", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
@@ -170,14 +224,76 @@ async def serve_station_player(station_id: str, request: Request):
         "glow": "rgba(245, 158, 11, 0.25)"
     })
 
-    base_url = get_base_url(request)
     html = template_file.read_text(encoding="utf-8")
     html = html.replace("{{STATION_ID}}", station_id)
     html = html.replace("{{STATION_NAME}}", relay.name)
     html = html.replace("{{STATION_CATEGORY}}", relay.config.get("category", "Quran"))
     html = html.replace("{{STATION_DESC}}", relay.config.get("description", "بث حي مستمر على مدار 24 ساعة"))
     html = html.replace("{{STATION_ICON}}", relay.config.get("icon", "📖"))
-    html = html.replace("{{PAGE_URL}}", f"{base_url}/listen/{station_id}")
+
+    # SEO/GEO: one canonical identity regardless of which domain/proxy served this page.
+    canonical_url = f"{CANONICAL_BASE}/listen/{station_id}"
+    stream_url = f"{CANONICAL_BASE}/station/{station_id}"
+    og_image = f"{CANONICAL_BASE}/static/og/{station_id}.png"
+    html = html.replace("{{CANONICAL_URL}}", canonical_url)
+    html = html.replace("{{OG_IMAGE}}", og_image)
+
+    # Stacked schema.org JSON-LD: RadioStation (entity) + RadioBroadcastService (live stream)
+    # + Organization (operator) + WebSite. This is the primary GEO signal — it tells classic
+    # and generative engines this is a named, citable radio station, not just an HTML page.
+    station_name = relay.name
+    station_desc = relay.config.get("description", "بث حي مستمر على مدار 24 ساعة")
+    station_cat = relay.config.get("category", "Quran")
+    jsonld = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "RadioStation",
+                "@id": f"{canonical_url}#station",
+                "name": station_name,
+                "url": canonical_url,
+                "description": station_desc,
+                "image": og_image,
+                "genre": station_cat,
+                "inLanguage": "ar",
+                "logo": f"{CANONICAL_BASE}/static/og/{station_id}.png",
+                "sameAs": [stream_url],
+                "parentOrganization": {"@id": f"{CANONICAL_BASE}#organization"},
+            },
+            {
+                "@type": "RadioBroadcastService",
+                "@id": f"{canonical_url}#service",
+                "name": f"{station_name} — البث المباشر",
+                "broadcastDisplayName": station_name,
+                "url": stream_url,
+                "description": station_desc,
+                "genre": station_cat,
+                "inLanguage": "ar",
+                "serviceType": "Live audio stream",
+                "provider": {"@id": f"{canonical_url}#station"},
+                "broadcaster": {"@id": f"{CANONICAL_BASE}#organization"},
+                "areaServed": {"@type": "Country", "name": "Worldwide"},
+                "availableChannel": {"@type": "RadioChannel", "broadcastServiceTier": "Free"},
+            },
+            {
+                "@type": "Organization",
+                "@id": f"{CANONICAL_BASE}#organization",
+                "name": "OmniRadio",
+                "url": f"{CANONICAL_BASE}",
+                "logo": {"@type": "ImageObject", "url": f"{CANONICAL_BASE}/static/og/{station_id}.png"},
+                "sameAs": ["https://github.com/xecod-dev/omniradio", "https://radio.serastores.com"],
+            },
+            {
+                "@type": "WebSite",
+                "@id": f"{CANONICAL_BASE}#website",
+                "name": "OmniRadio — إذاعة القرآن الكريم",
+                "url": f"{CANONICAL_BASE}",
+                "inLanguage": "ar",
+                "publisher": {"@id": f"{CANONICAL_BASE}#organization"},
+            },
+        ],
+    }
+    html = html.replace("{{JSONLD_SCHEMA}}", json.dumps(jsonld, ensure_ascii=False))
 
     # Allowed stations for the channel switcher dropdown (id/name/icon/category only — no secrets)
     stations_meta = [
