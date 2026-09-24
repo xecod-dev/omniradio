@@ -152,6 +152,19 @@
         "local:/app/audio/cache"
       ],
       "bitrate": 128
+    },
+    {
+      "id": "AdelRayan",
+      "name": "الشيخ عادل ريان",
+      "name_en": "SHEIKH AdelRayan",
+      "category": "General",
+      "description": "",
+      "icon": "📻",
+      "sources": [
+        "archive:AdelRayanPerJuz",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 128
     }
   ]
 }
