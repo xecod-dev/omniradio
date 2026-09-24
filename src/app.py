@@ -22,7 +22,7 @@ from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
-APP_VERSION = os.getenv("APP_VERSION", "2.6.0")
+APP_VERSION = os.getenv("APP_VERSION", "2.6.1")
 GIT_SHA = os.getenv("GIT_SHA", "local")
 APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-24")
 
@@ -137,6 +137,27 @@ async def sitemap_xml():
         f"{entries}\n"
         "</urlset>\n"
     )
+
+
+@app.get("/llms.txt", response_class=PlainTextResponse)
+async def llms_txt():
+    """llms.txt — machine-readable site summary for non-Google AI crawlers
+    (Google ignores it per Search Central; harmless and may help other engines)."""
+    lines = [
+        "# OmniRadio",
+        "",
+        "> OmniRadio is an Islamic Quran radio platform broadcasting live recitations",
+        "> 24/7 from Cairo, Egypt as MP3 streams (128 kbps). Each station is a dedicated",
+        f"> live player page. Primary stream and canonical domain: {CANONICAL_BASE}.",
+        "",
+        "## Stations",
+        "",
+    ]
+    for s in engine.get_all_stations_status():
+        lines.append(f"- [{s['name']}]({CANONICAL_BASE}/listen/{s['id']}): {s.get('description', '') or ('بث مباشر 24/7')} — [{s['id']}]({CANONICAL_BASE}/station/{s['id']})")
+    lines.append("")
+    lines.append(f"## Homepage: {CANONICAL_BASE}")
+    return "\n".join(lines)
 
 
 @app.get("/favicon.ico")
@@ -294,6 +315,30 @@ async def serve_station_player(station_id: str, request: Request):
         ],
     }
     html = html.replace("{{JSONLD_SCHEMA}}", json.dumps(jsonld, ensure_ascii=False))
+
+    # Visible station About block — self-contained answer for users AND AI crawlers
+    # (GEO citability: front-loaded, quotable facts with specific values).
+    bitrate_kbps = relay.config.get("bitrate", 128)
+    station_icon = relay.config.get("icon", "📖")
+    about_facts = [
+        ("التصنيف", station_cat),
+        ("الجودة", f"{bitrate_kbps} كيلوبت/ثانية MP3"),
+        ("البث", "مباشر 24/7"),
+        ("اللغة", "العربية"),
+        ("بروتوكول", "HTTP live stream"),
+    ]
+    facts_html = "".join(f"<li><span>{k}</span><b>{v}</b></li>" for k, v in about_facts)
+    about_block = (
+        '<div class="about-card">'
+        f"<h2>{station_icon} عن محطة {station_name}</h2>"
+        f"<p class=\"about-lead\">«{station_name}» محطة إذاعية تبث تلاوات القرآن الكريم ببث حي "
+        f"مستمر على مدار الساعة (24/7) بجودة {bitrate_kbps} كيلوبت/ثانية بصيغة MP3. "
+        f"{station_desc} يمكن الاستماع مباشرة عبر المتصفح، أو عبر مشغل الوسائط "
+        f"(VLC / Windows Media Player) من رابط البث: {stream_url}.</p>"
+        f'<ul class="about-facts">{facts_html}</ul>'
+        "</div>"
+    )
+    html = html.replace("{{ABOUT_BLOCK}}", about_block)
 
     # Allowed stations for the channel switcher dropdown (id/name/icon/category only — no secrets)
     stations_meta = [
