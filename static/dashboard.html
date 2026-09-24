@@ -40,17 +40,6 @@
 
         .day-mode .cloud { opacity: 0.15; animation: drift 60s linear infinite; }
         
-        /* Floating Toggle */
-        #sky-toggle-btn {
-            position: fixed; bottom: 24px; right: 24px; z-index: 10001;
-            width: 50px; height: 50px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white; cursor: pointer; pointer-events: auto;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; transition: transform 0.2s, background 0.3s;
-        }
-        #sky-toggle-btn:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
         @keyframes drift { from { left: -300px; } to { left: 100%; } }
 
         * {
@@ -807,7 +796,6 @@
 </head>
 <body>
     <div id="sky-layer">
-        <button id="sky-toggle-btn" onclick="toggleSky()">☀</button>
         <div id="clouds-wrap">
             <div class="cloud type-1" style="top: 10%;"></div>
             <div class="cloud" style="width: 130px; height: 45px; top: 25%; animation-delay: -10s;"></div>
@@ -869,6 +857,7 @@
         <div class="header-actions">
             <button id="ftpHeaderBtn" onclick="openModal('ftpModal')" class="btn" style="display: none;">📂 FTP</button>
             <button id="uploadHeaderBtn" onclick="openModal('uploadModal')" class="btn btn-primary" style="display: none;">📤 Upload ZIP</button>
+            <button id="newStationHeaderBtn" onclick="openModal('newStationModal')" class="btn" style="display: none;">➕ New Station</button>
             <a href="/playlist.m3u" class="btn btn-success" download>📥 Master .M3U</a>
             <button id="adminHeaderBtn" onclick="handleAdminHeaderAction()" class="btn">🔐 Admin</button>
         </div>
@@ -1039,7 +1028,7 @@
                     <textarea id="editDescription" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Sources (one per line)</label>
+                    <label>Sources (one per line, e.g., local:/app/audio/quran)</label>
                     <textarea id="editSources" class="form-control" rows="5" required></textarea>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -1050,30 +1039,50 @@
         </div>
     </div>
 
-    <!-- Edit Station Modal -->
-    <div id="editModal" class="modal-backdrop">
+    <!-- New Station Modal -->
+    <div id="newStationModal" class="modal-backdrop">
         <div class="modal-card">
             <div class="modal-header">
-                <div class="modal-title">✏️ Edit Station</div>
-                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+                <div class="modal-title">➕ New Station</div>
+                <button class="modal-close" onclick="closeModal('newStationModal')">&times;</button>
             </div>
-            <form id="editForm" onsubmit="handleEditSubmit(event)">
-                <input type="hidden" id="editStationId">
+            <form id="newStationForm" onsubmit="handleNewStationSubmit(event)">
                 <div class="form-group">
-                    <label>Station Name</label>
-                    <input type="text" id="editName" class="form-control" required>
+                    <label>Station ID (url-safe slug, e.g., my-station)</label>
+                    <input type="text" id="newStationId" class="form-control" required pattern="[a-z0-9-]+" title="lowercase letters, numbers, hyphens">
+                </div>
+                <div class="form-group">
+                    <label>Station Name (Arabic)</label>
+                    <input type="text" id="newStationName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Name (English)</label>
+                    <input type="text" id="newStationNameEn" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" id="newStationCategory" class="form-control" placeholder="Quran">
+                </div>
+                <div class="form-group">
+                    <label>Icon (emoji)</label>
+                    <input type="text" id="newStationIcon" class="form-control" placeholder="📻">
                 </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea id="editDescription" class="form-control" rows="3"></textarea>
+                    <textarea id="newStationDescription" class="form-control" rows="2"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Sources (one per line, e.g., local:/app/audio/quran)</label>
-                    <textarea id="editSources" class="form-control" rows="5" required></textarea>
+                    <label>Sources (one per line)</label>
+                    <textarea id="newStationSources" class="form-control" rows="4" required placeholder="http://example.com/stream.mp3&#10;local:/app/audio/quran&#10;archive:item-identifier&#10;mp3quran:https://serverX.mp3quran.net/reciter/"></textarea>
                 </div>
+                <div class="form-group">
+                    <label>Bitrate (kbps)</label>
+                    <input type="number" id="newStationBitrate" class="form-control" value="128" min="32" max="320">
+                </div>
+                <div id="newStationError" style="display: none; font-size: 12px; color: var(--red); margin-bottom: 10px;"></div>
                 <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                    <button type="button" class="btn" onclick="closeModal('editModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn" onclick="closeModal('newStationModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="newStationSubmitBtn">Create Station</button>
                 </div>
             </form>
         </div>
@@ -1141,15 +1150,18 @@
         function updateAdminUI() {
             const ftpBtn = document.getElementById('ftpHeaderBtn');
             const uploadBtn = document.getElementById('uploadHeaderBtn');
+            const newStationBtn = document.getElementById('newStationHeaderBtn');
             const adminBtn = document.getElementById('adminHeaderBtn');
 
             if (isAdmin) {
                 if (ftpBtn) ftpBtn.style.display = 'inline-flex';
                 if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+                if (newStationBtn) newStationBtn.style.display = 'inline-flex';
                 if (adminBtn) adminBtn.textContent = '🚪 Logout';
             } else {
                 if (ftpBtn) ftpBtn.style.display = 'none';
                 if (uploadBtn) uploadBtn.style.display = 'none';
+                if (newStationBtn) newStationBtn.style.display = 'none';
                 if (adminBtn) adminBtn.textContent = '🔐 Admin';
             }
         }
@@ -1403,6 +1415,56 @@
                 alert('Upload error: ' + err);
             } finally {
                 progress.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function handleNewStationSubmit(e) {
+            e.preventDefault();
+            const errDiv = document.getElementById('newStationError');
+            errDiv.style.display = 'none';
+            const submitBtn = document.getElementById('newStationSubmitBtn');
+            submitBtn.disabled = true;
+
+            const sources = document.getElementById('newStationSources').value.split('\n').map(s => s.trim()).filter(s => s);
+            if (!sources.length) {
+                errDiv.textContent = 'Please add at least one source.';
+                errDiv.style.display = 'block';
+                submitBtn.disabled = false;
+                return;
+            }
+
+            const payload = {
+                id: document.getElementById('newStationId').value.trim(),
+                name: document.getElementById('newStationName').value.trim(),
+                name_en: document.getElementById('newStationNameEn').value.trim(),
+                category: document.getElementById('newStationCategory').value.trim() || 'General',
+                description: document.getElementById('newStationDescription').value.trim(),
+                icon: document.getElementById('newStationIcon').value.trim() || '📻',
+                sources: sources,
+                bitrate: parseInt(document.getElementById('newStationBitrate').value, 10) || 128
+            };
+
+            try {
+                let res = await fetch('/api/stations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    closeModal('newStationModal');
+                    document.getElementById('newStationForm').reset();
+                    fetchStations();
+                    alert('Station created! Sources started...');
+                } else {
+                    let d = await res.json();
+                    errDiv.textContent = 'Error: ' + (d.detail || 'Server error');
+                    errDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errDiv.textContent = 'Error: ' + err;
+                errDiv.style.display = 'block';
+            } finally {
                 submitBtn.disabled = false;
             }
         }
@@ -1863,22 +1925,14 @@
         // Sky Mode Management
         window.setSkyMode = (isDay) => {
             const body = document.body;
-            const toggleBtn = document.getElementById('sky-toggle-btn');
             
             if (isDay) {
                 body.classList.add('day-mode');
-                if (toggleBtn) toggleBtn.textContent = '☾';
             } else {
                 body.classList.remove('day-mode');
-                if (toggleBtn) toggleBtn.textContent = '☀';
             }
         };
         
-        window.toggleSky = () => {
-            const isDay = document.body.classList.contains('day-mode');
-            window.setSkyMode(!isDay);
-        };
-
         const h = new Date().getHours();
         window.setSkyMode(h >= 6 && h < 18);
 
