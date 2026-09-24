@@ -22,9 +22,9 @@ from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
-APP_VERSION = os.getenv("APP_VERSION", "2.2.0")
+APP_VERSION = os.getenv("APP_VERSION", "2.5.0")
 GIT_SHA = os.getenv("GIT_SHA", "local")
-APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-21")
+APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-24")
 
 # Configure logging
 logging.basicConfig(

@@ -5,13 +5,13 @@ services:
       dockerfile: Dockerfile
       args:
         GIT_SHA: ${GIT_SHA:-local}
-        APP_VERSION: ${APP_VERSION:-2.4.0}
+        APP_VERSION: ${APP_VERSION:-2.5.0}
     image: radio-app:latest
     container_name: radio-app
     restart: unless-stopped
     environment:
-      - APP_VERSION=${APP_VERSION:-2.4.0}
-      - APP_UPDATED=${APP_UPDATED:-2026-09-22}
+      - APP_VERSION=${APP_VERSION:-2.5.0}
+      - APP_UPDATED=${APP_UPDATED:-2026-09-24}
       - PORT=9000
       - AUDIO_DIR=/app/audio
       - CONFIG_FILE=/app/config/stations.json
