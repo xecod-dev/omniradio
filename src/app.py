@@ -681,6 +681,96 @@ async def api_delete_file(request: Request, path: str = Query(...)):
         raise HTTPException(status_code=404, detail="File not found or protected")
     return {"status": "deleted", "path": path}
 
+@app.get("/status-json.xsl")
+async def icecast_status_json(request: Request):
+    """Icecast-compatible /status-json.xsl stats page for radio directories.
+
+    Internet-Radio.com, Streema, myTuner, Radio Garden etc. only list
+    Shoutcast/Icecast stations and read this standard JSON endpoint to
+    discover mounts, listeners, bitrate and stream URLs. We are a custom
+    HTTP MP3 relay, so we expose the same shape they expect — one source
+    block per station (the /station/<id> mount).
+    """
+    base_url = get_base_url(request)
+    sources = []
+    total_listeners = 0
+    server_start_ts = time.time()
+    for relay in engine.relays.values():
+        info = relay.get_status_info()
+        total_listeners += int(info.get("listeners", 0))
+        bitrate_kbps = int(relay.config.get("bitrate", 128))
+        server_start_ts = min(server_start_ts, relay.source_start_time)
+        sources.append({
+            "admin": "radio@serastores.com",
+            "audio_info": f"bitrate={bitrate_kbps};channels=2;samplerate=44100",
+            "bitrate": bitrate_kbps,
+            "genre": relay.config.get("category", "Radio"),
+            "listener_peak": int(info.get("listeners", 0)),
+            "listeners": int(info.get("listeners", 0)),
+            "listenurl": f"{base_url}/station/{relay.station_id}",
+            "mount": f"/station/{relay.station_id}",
+            "server_name": relay.config.get("name_en", relay.name),
+            "server_type": "audio/mpeg",
+            "stream_start": datetime.datetime.fromtimestamp(
+                relay.source_start_time, tz=datetime.timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S"),
+            "status": info.get("status", "starting"),
+        })
+    return JSONResponse({
+        "icestats": {
+            "admin": "radio@serastores.com",
+            "host": base_url,
+            "location": "Cairo, Egypt",
+            "server_id": "OmniRadio (Icecast-compatible)",
+            "server_start": datetime.datetime.fromtimestamp(
+                server_start_ts, tz=datetime.timezone.utc,
+            ).strftime("%Y-%m-%d %H:%M:%S"),
+            "listeners": total_listeners,
+            "source": sources,
+        }
+    })
+
+# Also expose the classic Icecast status page for human browsing
+@app.get("/status.xsl", response_class=HTMLResponse)
+async def icecast_status_xsl(request: Request):
+    """Human-readable Icecast-style status page (same data as status-json.xsl)."""
+    base_url = get_base_url(request)
+    rows = []
+    total_listeners = 0
+    for relay in engine.relays.values():
+        info = relay.get_status_info()
+        listeners = int(info.get("listeners", 0))
+        total_listeners += listeners
+        bitrate_kbps = int(relay.config.get("bitrate", 128))
+        name = relay.config.get("name_en", relay.name)
+        rows.append(f"""<tr>
+            <td><a href="{base_url}/station/{relay.station_id}">/station/{relay.station_id}</a></td>
+            <td>{name}</td>
+            <td>{bitrate_kbps} kbps</td>
+            <td>{listeners}</td>
+            <td>{info.get('status', 'starting')}</td>
+        </tr>""")
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>OmniRadio — Stream Status (Icecast-compatible)</title>
+<style>
+body {{ font-family: sans-serif; margin: 2rem; background: #0b1220; color: #e2e8f0; }}
+h1 {{ color: #f59e0b; }}
+table {{ border-collapse: collapse; width: 100%; max-width: 900px; }}
+th, td {{ border: 1px solid #334155; padding: 0.5rem 0.75rem; text-align: left; }}
+th {{ background: #1e293b; }}
+a {{ color: #38bdf8; }}
+.meta {{ color: #94a3b8; font-size: 0.9em; }}
+</style></head><body>
+<h1>OmniRadio — Stream Status</h1>
+<p class="meta">Server: {base_url} · Total listeners: {total_listeners} ·
+Stations: {len(engine.relays)} · Machine-readable: <a href="{base_url}/status-json.xsl">/status-json.xsl</a></p>
+<table>
+<tr><th>Mount</th><th>Station</th><th>Bitrate</th><th>Listeners</th><th>Status</th></tr>
+{''.join(rows)}
+</table>
+</body></html>"""
+    return HTMLResponse(content=html)
+
 @app.get("/api/status")
 async def api_get_status(request: Request):
     """Returns server telemetry, IP addresses for LAN, Tailscale, DuckDNS, and FTP connection info."""
