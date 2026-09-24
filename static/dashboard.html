@@ -202,17 +202,17 @@
             font-weight: 600;
         }
 
-        /* Dynamic Sun - position & color follow the time of day */
+        /* Dynamic Sun - fixed at top-right (color still follows the time of day) */
         .sun-wrap {
             position: absolute;
             width: 110px;
             height: 110px;
-            transform: translate(-50%, -50%);
+            top: 84px;
+            right: 24px;
             pointer-events: none;
             z-index: 1;
             opacity: 0;
-            transition: opacity 2s ease, left 1.5s ease-out, top 1.5s ease-out;
-            will-change: left, top, opacity;
+            transition: opacity 2s ease;
         }
 
         .sun-halo {
@@ -220,7 +220,6 @@
             inset: 0;
             border-radius: 50%;
             background: radial-gradient(circle, var(--sun-glow, rgba(255, 190, 90, 0.35)) 0%, transparent 62%);
-            animation: sunPulse 7s ease-in-out infinite;
         }
 
         .sun-core {
@@ -247,11 +246,6 @@
             white-space: nowrap;
             backdrop-filter: blur(6px);
             font-weight: 600;
-        }
-
-        @keyframes sunPulse {
-            0%, 100% { opacity: 0.75; transform: scale(0.97); }
-            50% { opacity: 1; transform: scale(1.05); }
         }
 
         /* Islamic Spiritual Quote Card */
@@ -1886,8 +1880,6 @@
             const colors = getSunColors(sun.t);
             wrap.style.setProperty('--sun-color', colors.core);
             wrap.style.setProperty('--sun-glow', colors.glow);
-            wrap.style.left = (6 + sun.azimuth * 88) + '%';   // east edge -> west edge
-            wrap.style.top = (70 - sun.elevation * 54) + '%'; // horizon -> upper sky
             wrap.style.opacity = '1';
 
             const caption = document.getElementById('sunCaption');
