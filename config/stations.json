@@ -141,10 +141,10 @@
     },
     {
       "id": "local-library",
-      "name": "المكتبة الصوتية والملفات المرفوعة",
+      "name": "متنوع",
       "name_en": "Islamic Audio Library (Uploads)",
       "category": "Islamic Library",
-      "description": "مكتبة شاملة تبث تلاوات وملفات عشوائياً من كافة المحطات والمكتبة المحلية",
+      "description": "مكتبة متنوعة تبث تلاوات من كافة المحطات",
       "icon": "📁",
       "sources": [
         "local:/app/audio",
