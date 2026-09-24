@@ -663,7 +663,7 @@
         /* --- Quick Actions Row --- */
         .action-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
         }
 
@@ -846,39 +846,34 @@
             margin-top: 8px;
         }
 
-        /* About section: visible, self-contained station facts (SEO/GEO citability) */
+        /* About section: shown inside the About popup modal (opened via ℹ️ عن المحطة).
+           Styled independently so the same block works in the modal context. */
         .about-card {
             width: 100%;
-            background: rgba(12, 22, 28, 0.6);
-            border: 1px solid rgba(212, 175, 55, 0.30);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-            border-radius: 16px;
-            padding: 14px 16px;
             text-align: right;
             direction: rtl;
-            margin-top: 14px;
         }
         .about-card h2 {
             font-size: 16px;
             font-weight: 700;
             color: var(--accent);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 6px;
         }
         .about-lead {
             font-size: 13.5px;
-            line-height: 1.7;
-            color: rgba(236, 253, 245, 0.85);
-            margin-bottom: 10px;
+            line-height: 1.8;
+            color: rgba(236, 253, 245, 0.88);
+            margin-bottom: 12px;
         }
         .about-facts {
             list-style: none;
             padding: 0;
             margin: 0;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 6px;
             font-size: 11.5px;
         }
@@ -896,6 +891,73 @@
             color: var(--accent);
             font-weight: 700;
             white-space: nowrap;
+        }
+        .about-sources {
+            margin-top: 12px;
+        }
+        .about-sources h3 {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .about-sources ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .about-sources a {
+            display: inline-block;
+            background: rgba(5, 12, 8, 0.55);
+            border: 1px solid rgba(223, 183, 108, 0.25);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 10.5px;
+            color: var(--accent);
+            text-decoration: none;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .about-sources a:hover {
+            background: rgba(223, 183, 108, 0.25);
+            border-color: var(--theme-accent);
+        }
+
+        /* About Modal (reuses .img-modal shell) */
+        .about-modal-box {
+            max-width: min(92vw, 540px);
+            max-height: 80vh;
+            overflow-y: auto;
+            background: rgba(12, 22, 28, 0.97);
+            border: 1px solid rgba(212, 175, 55, 0.30);
+            border-radius: 18px;
+            padding: 20px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        }
+        .about-modal-close {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .about-modal-close:hover {
+            background: rgba(223, 183, 108, 0.25);
+            color: #fff;
+            border-color: var(--theme-accent);
         }
 
         /* Azkar chip below the station icon */
@@ -1302,6 +1364,10 @@
                     <span>📋</span>
                     <span>نسخ</span>
                 </button>
+                <button class="action-btn" onclick="openAboutModal()" title="معلومات عن المحطة والقارئ">
+                    <span>ℹ️</span>
+                    <span>عن المحطة</span>
+                </button>
             </div>
 
             <!-- Islamic Spiritual Quote Box (Refreshes every 5 mins from Turso / Local SQLite) -->
@@ -1323,8 +1389,9 @@
                 </div>
             </div>
 
-            <!-- Station About (visible, self-contained facts for users + AI citability) -->
-            {{ABOUT_BLOCK}}
+            <!-- Station About content lives in the popup modal below (hidden by default;
+             still server-rendered for SEO/GEO crawlers). -->
+            <!-- About popup opener button is in the action row above. -->
 
         </div>
     </main>
@@ -1338,6 +1405,16 @@
             <a class="footer-dl" href="/playlist.m3u" title="تحميل قائمة المحطات الأحدث">تحميل القائمة</a>
         </div>
     </footer>
+
+    <!-- Station About Modal (hidden by default; opens via the ℹ️ عن المحطة button).
+         Content stays server-rendered inside this DOM node for SEO/GEO crawlers. -->
+    <div class="img-modal about-modal" id="aboutModal" role="dialog" aria-modal="true" aria-label="عن المحطة"
+         onclick="if(event.target===this) closeAboutModal()">
+        <div class="about-modal-box">
+            <button class="about-modal-close" onclick="closeAboutModal()" title="إغلاق" aria-label="إغلاق">✕</button>
+            {{ABOUT_BLOCK}}
+        </div>
+    </div>
 
     <!-- Quote Image Modal -->
     <div class="img-modal" id="quoteImgModal" role="dialog" aria-modal="true" aria-label="صورة الفائدة" onclick="if(event.target===this) closeQuoteImage()">
@@ -2266,6 +2343,23 @@
         function closeQuoteImage() {
             document.getElementById('quoteImgModal').classList.remove('show');
         }
+
+        /* Station About popup (content pre-rendered in the DOM for SEO/GEO) */
+        function openAboutModal() {
+            const m = document.getElementById('aboutModal');
+            if (m) m.classList.add('show');
+        }
+        function closeAboutModal() {
+            const m = document.getElementById('aboutModal');
+            if (m) m.classList.remove('show');
+        }
+        // ESC closes either modal
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeAboutModal();
+                closeQuoteImage();
+            }
+        });
 
         // ========================================================
         // 5. LISTENER METRICS (CURRENT & ALL-TIME SESSIONS)

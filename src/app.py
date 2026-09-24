@@ -22,7 +22,7 @@ from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
-APP_VERSION = os.getenv("APP_VERSION", "2.6.1")
+APP_VERSION = os.getenv("APP_VERSION", "2.6.2")
 GIT_SHA = os.getenv("GIT_SHA", "local")
 APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-24")
 
@@ -42,6 +42,21 @@ config_manager = ConfigManager()
 audio_manager = AudioManager()
 engine = RadioEngine(config_manager, audio_manager)
 quotes_manager = QuotesManager(os.getenv("QUOTES_DB_PATH", "/app/data/quotes.db"))
+
+# Researched per-station About content (Arabic) — see config/station_abouts.json.
+# Loaded at startup with fallback; NEVER edited via the PUT /api/stations API
+# (that clobbers station config — this file is a separate, safe source).
+ABOUTS_FILE = Path("/app/config/station_abouts.json")
+if not ABOUTS_FILE.exists():
+    ABOUTS_FILE = Path(__file__).resolve().parent.parent / "config" / "station_abouts.json"
+STATION_ABOUTS: Dict[str, Dict[str, Any]] = {}
+if ABOUTS_FILE.exists():
+    try:
+        with open(ABOUTS_FILE, "r", encoding="utf-8") as f:
+            STATION_ABOUTS = json.load(f)
+        logger.info(f"Loaded researched station About data from {ABOUTS_FILE}")
+    except Exception as e:
+        logger.error(f"Failed to load station_abouts.json: {e}")
 
 # Server credentials & ports
 server_cfg = config_manager.get_server_config()
@@ -318,24 +333,53 @@ async def serve_station_player(station_id: str, request: Request):
 
     # Visible station About block — self-contained answer for users AND AI crawlers
     # (GEO citability: front-loaded, quotable facts with specific values).
+    # Researched per-station content (config/station_abouts.json) wins when present;
+    # otherwise fall back to the auto-generated generic block.
     bitrate_kbps = relay.config.get("bitrate", 128)
     station_icon = relay.config.get("icon", "📖")
-    about_facts = [
+    about_entry = STATION_ABOUTS.get(station_id, {}) or {}
+
+    base_facts = [
         ("التصنيف", station_cat),
         ("الجودة", f"{bitrate_kbps} كيلوبت/ثانية MP3"),
         ("البث", "مباشر 24/7"),
         ("اللغة", "العربية"),
         ("بروتوكول", "HTTP live stream"),
     ]
-    facts_html = "".join(f"<li><span>{k}</span><b>{v}</b></li>" for k, v in about_facts)
+    researched_facts = about_entry.get("facts", []) if isinstance(about_entry.get("facts", []), list) else []
+    about_facts = researched_facts + base_facts
+    facts_html = "".join(
+        f"<li><span>{html_k}</span><b>{html_v}</b></li>"
+        for html_k, html_v in about_facts
+    )
+
+    researched_summary = about_entry.get("summary", "").strip()
+    if researched_summary:
+        lead_html = researched_summary
+    else:
+        lead_html = (
+            f"«{station_name}» محطة إذاعية تبث تلاوات القرآن الكريم ببث حي "
+            f"مستمر على مدار الساعة (24/7) بجودة {bitrate_kbps} كيلوبت/ثانية بصيغة MP3. "
+            f"{station_desc} يمكن الاستماع مباشرة عبر المتصفح، أو عبر مشغل الوسائط "
+            f"(VLC / Windows Media Player) من رابط البث: {stream_url}."
+        )
+
+    sources = about_entry.get("sources", []) if isinstance(about_entry.get("sources", []), list) else []
+    sources_html = ""
+    if sources:
+        links = "".join(
+            f'<li><a href="{src}" target="_blank" rel="noopener nofollow">'
+            f"{src.replace('https://', '').replace('http://', '').rstrip('/')}</a></li>"
+            for src in sources
+        )
+        sources_html = f'<div class="about-sources"><h3>المصادر</h3><ul>{links}</ul></div>'
+
     about_block = (
         '<div class="about-card">'
-        f"<h2>{station_icon} عن محطة {station_name}</h2>"
-        f"<p class=\"about-lead\">«{station_name}» محطة إذاعية تبث تلاوات القرآن الكريم ببث حي "
-        f"مستمر على مدار الساعة (24/7) بجودة {bitrate_kbps} كيلوبت/ثانية بصيغة MP3. "
-        f"{station_desc} يمكن الاستماع مباشرة عبر المتصفح، أو عبر مشغل الوسائط "
-        f"(VLC / Windows Media Player) من رابط البث: {stream_url}.</p>"
+        f"<h2>{station_icon} عن {station_name}</h2>"
+        f"<p class=\"about-lead\">{lead_html}</p>"
         f'<ul class="about-facts">{facts_html}</ul>'
+        f"{sources_html}"
         "</div>"
     )
     html = html.replace("{{ABOUT_BLOCK}}", about_block)
