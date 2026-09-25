@@ -5,16 +5,21 @@ services:
       dockerfile: Dockerfile
       args:
         GIT_SHA: ${GIT_SHA:-local}
-        APP_VERSION: ${APP_VERSION:-2.6.2}
+        APP_VERSION: ${APP_VERSION:-2.6.3}
     image: radio-app:latest
     container_name: radio-app
     restart: unless-stopped
     environment:
-      - APP_VERSION=${APP_VERSION:-2.6.2}
-      - APP_UPDATED=${APP_UPDATED:-2026-09-24}
+      - APP_VERSION=${APP_VERSION:-2.6.3}
+      - APP_UPDATED=${APP_UPDATED:-2026-09-25}
       - PORT=9000
       - AUDIO_DIR=/app/audio
       - CONFIG_FILE=/app/config/stations.json
+      # Icecast-compatible YP directory client (Internet-Radio.com et al.)
+      # Set YP_URL to enable, e.g. http://icecast-yp.internet-radio.com
+      - YP_URL=${YP_URL:-http://icecast-yp.internet-radio.com}
+      - YP_ENABLED=${YP_ENABLED:-1}
+      - YP_INTERVAL=${YP_INTERVAL:-60}
     ports:
       - "9000:9000"
       - "2121:2121"

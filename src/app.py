@@ -20,11 +20,12 @@ from .audio_manager import AudioManager
 from .engine import RadioEngine
 from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
+from .yp_client import YPClient
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
-APP_VERSION = os.getenv("APP_VERSION", "2.6.2")
+APP_VERSION = os.getenv("APP_VERSION", "2.6.3")
 GIT_SHA = os.getenv("GIT_SHA", "local")
-APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-24")
+APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-25")
 
 # Canonical public base URL — the ONE domain search engines / AI engines treat as authoritative.
 # All canonical links, sitemap entries, og:url and JSON-LD identifiers point here so the
@@ -42,6 +43,18 @@ config_manager = ConfigManager()
 audio_manager = AudioManager()
 engine = RadioEngine(config_manager, audio_manager)
 quotes_manager = QuotesManager(os.getenv("QUOTES_DB_PATH", "/app/data/quotes.db"))
+
+# Icecast-compatible Yellow Pages directory client (e.g. Internet-Radio.com).
+# Not a real Icecast server, so we push YP touches (protocol v2) ourselves:
+# add -> SID -> periodic touch -> remove on shutdown, exactly as Icecast's
+# <directory> block would. Disabled when YP_URL is empty or YP_ENABLED=0.
+yp_client = YPClient(
+    base_url=CANONICAL_BASE,
+    yp_url=os.getenv("YP_URL", ""),
+    engine=engine,
+    enabled=os.getenv("YP_ENABLED", "1") != "0",
+    interval=int(os.getenv("YP_INTERVAL", "60")),
+)
 
 # Researched per-station About content (Arabic) — see config/station_abouts.json.
 # Loaded at startup with fallback; NEVER edited via the PUT /api/stations API
@@ -74,11 +87,13 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing OmniRadio Multi-Station Studio...")
     ftp_server.start()
     await engine.start()
+    await yp_client.start()
     quotes_task = asyncio.create_task(quotes_manager.start_daily_sync_worker())
     yield
     # Shutdown
     logger.info("Shutting down OmniRadio Studio...")
     quotes_task.cancel()
+    await yp_client.stop()
     await engine.stop()
     ftp_server.stop()
 
