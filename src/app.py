@@ -237,8 +237,8 @@ STATION_THEMES = {
     "alhussary": {
         "bg1": "#1e1b4b",
         "bg2": "#09071c",
-        "accent": "#f59e0b",
-        "glow": "rgba(245, 158, 11, 0.28)"
+        "accent": "#a78bfa",
+        "glow": "rgba(167, 139, 250, 0.30)"
     },
     "alafasi": {
         "bg1": "#0e374e",
@@ -246,11 +246,41 @@ STATION_THEMES = {
         "accent": "#38bdf8",
         "glow": "rgba(56, 189, 248, 0.28)"
     },
+    "albanna": {
+        "bg1": "#2e1065",
+        "bg2": "#150633",
+        "accent": "#d946ef",
+        "glow": "rgba(217, 70, 239, 0.28)"
+    },
+    "ammar-almulla": {
+        "bg1": "#3b2004",
+        "bg2": "#1c0f02",
+        "accent": "#fb923c",
+        "glow": "rgba(251, 146, 60, 0.30)"
+    },
+    "bandar-balila": {
+        "bg1": "#500724",
+        "bg2": "#240310",
+        "accent": "#fb7185",
+        "glow": "rgba(251, 113, 133, 0.28)"
+    },
+    "ahmad-tamim": {
+        "bg1": "#083344",
+        "bg2": "#03202c",
+        "accent": "#22d3ee",
+        "glow": "rgba(34, 211, 238, 0.28)"
+    },
+    "AdelRayan": {
+        "bg1": "#1a2e05",
+        "bg2": "#0c1702",
+        "accent": "#a3e635",
+        "glow": "rgba(163, 230, 53, 0.28)"
+    },
     "local-library": {
         "bg1": "#291804",
         "bg2": "#120a01",
-        "accent": "#f59e0b",
-        "glow": "rgba(245, 158, 11, 0.28)"
+        "accent": "#d9a05b",
+        "glow": "rgba(217, 160, 91, 0.28)"
     }
 }
 
