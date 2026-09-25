@@ -1594,7 +1594,7 @@
             }
 
             input.addEventListener('focus', () => {
-                input.select();
+                input.value = '';   /* clear current-station display on click */
                 open();
             });
             input.addEventListener('input', () => {
