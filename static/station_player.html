@@ -1514,24 +1514,16 @@
         const volIcon = document.getElementById('volIcon');
         const volSlider = document.getElementById('volSlider');
 
-        /* Searchable station combobox (allowed stations only) + random icons */
+        /* Searchable station combobox (allowed stations only) */
         const COMBO_ICON_POOL = ['🕌', '📖', '📿', '🕋', '🌙', '⭐', '✨', '📻', '🎙️', '☪️', '🫶', '🕊️', '🗣️', '📜', '🤲', '🗺️', '🎧', '🔊'];
         let comboLst = [];
         let comboIdx = -1;
 
-        /* Assign each station a random icon per page load (shuffled pool so
-           stations usually look distinct), falling back to the config icon. */
-        function buildRandomIcons() {
-            const pool = COMBO_ICON_POOL.slice();
-            for (let i = pool.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
-            }
-            const icons = {};
-            (stationsData || []).forEach((s, i) => {
-                icons[s.id] = pool[i % pool.length] || s.icon || '📻';
-            });
-            return icons;
+        /* Icons are saved per station in config/stations.json (single source
+           of truth). Fall back to the pool only if config icon is missing. */
+        function iconForStation(s) {
+            if (s && (s.icon || '').trim()) return s.icon;
+            return COMBO_ICON_POOL[Math.abs((s ? s.id || '' : '') .split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % COMBO_ICON_POOL.length] || '📻';
         }
 
         function initStationSwitcher() {
@@ -1540,9 +1532,8 @@
             const wrap = document.getElementById('stationCombo');
             if (!input || !list || !Array.isArray(stationsData)) return;
 
-            const icons = buildRandomIcons();
             const cur = stationsData.find(s => s.id === stationId);
-            input.value = (icons[stationId] || '📻') + '  ' + (cur ? cur.name : stationId);
+            input.value = (cur ? iconForStation(cur) : '📻') + '  ' + (cur ? cur.name : stationId);
             input.title = cur ? cur.name : stationId;
 
             /* Render filtered option rows (matches Arabic/English name + id) */
@@ -1555,7 +1546,7 @@
                     s.id.toLowerCase().includes(q)
                 );
                 list.innerHTML = comboLst.length ? comboLst.map((s, i) => {
-                    const ic = icons[s.id] || s.icon || '📻';
+                    const ic = iconForStation(s);
                     return `<li class="combo-item" role="option" data-idx="${i}" data-id="${s.id}">` +
                            `<span class="combo-icon">${ic}</span>` +
                            `<span class="combo-name">${s.name || s.id}</span></li>`;
@@ -1631,8 +1622,8 @@
             }
         }
 
-        /* Station icons are randomized per page load inside the searchable
-           combobox (see initStationSwitcher). */
+        /* Station icons are saved per station in config/stations.json (see
+           iconForStation in initStationSwitcher). */
 
         /* Current date on top of the screen (Gregorian + Hijri) */
         function renderTopDate() {

@@ -48,7 +48,7 @@
       "name_en": "Sheikh Mohammed Siddiq Al-Minshawi",
       "category": "Quran Recitations",
       "description": "المصحف المرتل برواية حفص عن عاصم بصوت الشيخ المنشاوي",
-      "icon": "📖",
+      "icon": "🎙️",
       "sources": [
         "https://qurango.net/radio/mohammed_siddiq_alminshawi",
         "archive:c_202506vvv",
@@ -62,7 +62,7 @@
       "name_en": "Sheikh Mahmoud Khalil Al-Hussary",
       "category": "Quran Recitations",
       "description": "المصحف المرتل المتقن بصوت الشيخ الحصري",
-      "icon": "📖",
+      "icon": "📜",
       "sources": [
         "https://qurango.net/radio/mahmoud_khalil_alhussary",
         "archive:4752475475425724572457245742727636236",
@@ -76,7 +76,7 @@
       "name_en": "Sheikh Mishary Rashid Al-Afasy",
       "category": "Quran Recitations",
       "description": "تلاوات خاشعة ومختارة بصوت الشيخ مشاري العفاسي",
-      "icon": "📖",
+      "icon": "🌙",
       "sources": [
         "https://qurango.net/radio/mishary_alafasi",
         "local:/app/audio/quran"
@@ -89,7 +89,7 @@
       "name_en": "Sheikh Mahmoud Ali Al-Banna",
       "category": "Quran Recitations",
       "description": "المصحف المرتل برواية حفص عن عاصم بصوت الشيخ محمود علي البنا",
-      "icon": "📖",
+      "icon": "🤲",
       "sources": [
         "archive:albanna-1411kb-cairo-sound-wave-morattal",
         "mp3quran:https://server8.mp3quran.net/bna/",
@@ -103,7 +103,7 @@
       "name_en": "Sheikh Ammar Al-Mulla",
       "category": "Quran Recitations",
       "description": "تلاوات عطرة ومميزة بصوت الشيخ عمار الملا",
-      "icon": "📖",
+      "icon": "🗣️",
       "sources": [
         "archive:Ammar-Almulla",
         "local:/app/audio/cache/ammar-almulla",
@@ -117,7 +117,7 @@
       "name_en": "Sheikh Bandar Balila",
       "category": "Quran Recitations",
       "description": "مصحف الشيخ بندر بليلة مقسم صفحات، يُبث مباشرة من أرشيف الإنترنت بدون تحميل",
-      "icon": "📖",
+      "icon": "🕋",
       "sources": [
         "archive:rabiea3568356835683568865",
         "mp3quran:https://server6.mp3quran.net/balilah/",
@@ -131,7 +131,7 @@
       "name_en": "Sheikh Ahmad Tamim Al-Maraghi",
       "category": "Quran Recitations",
       "description": "تلاوات الشيخ أحمد تميم المراغي بجودة عالية",
-      "icon": "📖",
+      "icon": "✨",
       "sources": [
         "archive:Ahmad-Tamim-Maraghi-High-Quality",
         "local:/app/audio/cache/ahmad-tamim",
