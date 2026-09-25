@@ -409,7 +409,7 @@
             margin: 4px 0 12px;
         }
 
-        /* Channel switcher dropdown (top of player card) */
+        /* Station switcher: searchable combobox (top of player card) */
         .station-switcher {
             display: flex;
             flex-direction: column;
@@ -423,31 +423,96 @@
             font-weight: 700;
             opacity: 0.85;
         }
-        .station-switcher select {
+        .combo-wrap {
+            position: relative;
             width: 100%;
             max-width: 320px;
+        }
+        .combo-input {
+            width: 100%;
             background: rgba(8, 15, 25, 0.65);
             border: 1px solid rgba(255, 255, 255, 0.14);
             color: #e2e8f0;
             font-size: 15px;
             font-weight: 600;
             padding: 10px 14px;
+            padding-left: 34px;
             border-radius: 14px;
             outline: none;
-            cursor: pointer;
+            cursor: text;
             direction: rtl;
             transition: border-color 0.2s ease, background 0.2s ease;
         }
-        .station-switcher select:hover,
-        .station-switcher select:focus {
+        .combo-input::placeholder {
+            color: rgba(226, 232, 240, 0.55);
+            font-weight: 500;
+        }
+        .combo-input:hover,
+        .combo-input:focus {
             border-color: var(--theme-accent);
             background: rgba(255, 255, 255, 0.1);
         }
-        .station-switcher option {
-            background: #0f172a;
+        .combo-caret {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(226, 232, 240, 0.6);
+            font-size: 11px;
+            pointer-events: none;
+        }
+        .combo-list {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            z-index: 60;
+            list-style: none;
+            margin: 0;
+            padding: 6px;
+            max-height: 250px;
+            overflow-y: auto;
+            background: rgba(10, 18, 30, 0.97);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 14px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+            direction: rtl;
+            text-align: right;
+            scrollbar-width: thin;
+        }
+        .combo-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: 10px;
             color: #e2e8f0;
-            font-size: 15px;
-            padding: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .combo-item:hover,
+        .combo-item.highlighted {
+            background: var(--theme-accent);
+            color: #040812;
+        }
+        .combo-item .combo-icon {
+            font-size: 17px;
+            line-height: 1;
+            flex: 0 0 auto;
+        }
+        .combo-item .combo-name {
+            flex: 1 1 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .combo-empty {
+            padding: 10px;
+            text-align: center;
+            color: rgba(226, 232, 240, 0.6);
+            font-size: 13px;
         }
 
         /* --- Controls Row: play + visualizer + volume --- */
@@ -1295,11 +1360,17 @@
         <!-- Unified Player Glass Card -->
         <div class="player-card">
 
-            <!-- Station switcher dropdown (top of card) -->
+            <!-- Station switcher: searchable combobox (top of card) -->
             <div class="station-switcher">
-                <label class="switcher-title" for="stationSwitcher">اختر المحطة</label>
-                <select id="stationSwitcher" onchange="switchStation(this.value)" aria-label="تغيير المحطة">
-                </select>
+                <label class="switcher-title" for="stationSearchInput">اختر المحطة</label>
+                <div class="combo-wrap" id="stationCombo">
+                    <input type="text" id="stationSearchInput" class="combo-input"
+                           autocomplete="off" role="combobox" aria-expanded="false"
+                           aria-controls="stationComboList" aria-label="تغيير المحطة"
+                           placeholder="ابحث عن محطة…">
+                    <span class="combo-caret" aria-hidden="true">▾</span>
+                    <ul class="combo-list" id="stationComboList" role="listbox" hidden></ul>
+                </div>
             </div>
 
             <!-- Live & Total Listeners Counter Badge -->
@@ -1443,13 +1514,115 @@
         const volIcon = document.getElementById('volIcon');
         const volSlider = document.getElementById('volSlider');
 
-        /* Channel switcher dropdown (allowed stations only) */
+        /* Searchable station combobox (allowed stations only) + random icons */
+        const COMBO_ICON_POOL = ['🕌', '📖', '📿', '🕋', '🌙', '⭐', '✨', '📻', '🎙️', '☪️', '🫶', '🕊️', '🗣️', '📜', '🤲', '🗺️', '🎧', '🔊'];
+        let comboLst = [];
+        let comboIdx = -1;
+
+        /* Assign each station a random icon per page load (shuffled pool so
+           stations usually look distinct), falling back to the config icon. */
+        function buildRandomIcons() {
+            const pool = COMBO_ICON_POOL.slice();
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            const icons = {};
+            (stationsData || []).forEach((s, i) => {
+                icons[s.id] = pool[i % pool.length] || s.icon || '📻';
+            });
+            return icons;
+        }
+
         function initStationSwitcher() {
-            const sel = document.getElementById('stationSwitcher');
-            if (!sel || !Array.isArray(stationsData)) return;
-            sel.innerHTML = stationsData.map(s =>
-                `<option value="${s.id}" ${s.id === stationId ? 'selected' : ''}>${s.icon || '📻'} ${s.name}</option>`
-            ).join('');
+            const input = document.getElementById('stationSearchInput');
+            const list = document.getElementById('stationComboList');
+            const wrap = document.getElementById('stationCombo');
+            if (!input || !list || !Array.isArray(stationsData)) return;
+
+            const icons = buildRandomIcons();
+            const cur = stationsData.find(s => s.id === stationId);
+            input.value = (icons[stationId] || '📻') + '  ' + (cur ? cur.name : stationId);
+            input.title = cur ? cur.name : stationId;
+
+            /* Render filtered option rows (matches Arabic/English name + id) */
+            function render(query) {
+                const q = (query || '').trim().toLowerCase();
+                comboLst = stationsData.filter(s =>
+                    !q ||
+                    (s.name || '').toLowerCase().includes(q) ||
+                    (s.name_en || '').toLowerCase().includes(q) ||
+                    s.id.toLowerCase().includes(q)
+                );
+                list.innerHTML = comboLst.length ? comboLst.map((s, i) => {
+                    const ic = icons[s.id] || s.icon || '📻';
+                    return `<li class="combo-item" role="option" data-idx="${i}" data-id="${s.id}">` +
+                           `<span class="combo-icon">${ic}</span>` +
+                           `<span class="combo-name">${s.name || s.id}</span></li>`;
+                }).join('') : `<li class="combo-empty">لا توجد نتائج</li>`;
+                comboIdx = -1;
+            }
+
+            function open() {
+                render(input.value.replace(/^\S+\s+/, ''));  /* strip leading icon token */
+                list.hidden = false;
+                wrap.classList.add('open');
+                input.setAttribute('aria-expanded', 'true');
+            }
+            function close(restore) {
+                list.hidden = true;
+                wrap.classList.remove('open');
+                input.setAttribute('aria-expanded', 'false');
+                if (restore) {
+                    const c = stationsData.find(s => s.id === stationId);
+                    input.value = (icons[stationId] || '📻') + '  ' + (c ? c.name : stationId);
+                }
+            }
+            function highlight(idx) {
+                comboIdx = idx;
+                list.querySelectorAll('.combo-item').forEach(el => {
+                    el.classList.toggle('highlighted', Number(el.dataset.idx) === idx);
+                });
+            }
+            function pick(id) {
+                if (id && id !== stationId) {
+                    window.location.href = '/listen/' + encodeURIComponent(id);
+                } else {
+                    close(true);
+                    input.blur();
+                }
+            }
+
+            input.addEventListener('focus', () => {
+                input.select();
+                open();
+            });
+            input.addEventListener('input', () => {
+                list.hidden = false;
+                wrap.classList.add('open');
+                render(input.value);
+            });
+            input.addEventListener('keydown', (e) => {
+                if (!comboLst.length) return;
+                if (e.key === 'ArrowDown') { e.preventDefault(); highlight((comboIdx + 1) % comboLst.length); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); highlight((comboIdx - 1 + comboLst.length) % comboLst.length); }
+                else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const s = comboLst[comboIdx >= 0 ? comboIdx : 0];
+                    if (s) pick(s.id);
+                } else if (e.key === 'Escape') {
+                    close(true);
+                    input.blur();
+                }
+            });
+            list.addEventListener('mousedown', (e) => e.preventDefault()); /* keep focus in input */
+            list.addEventListener('click', (e) => {
+                const li = e.target.closest('.combo-item');
+                if (li) pick(li.dataset.id);
+            });
+            document.addEventListener('click', (e) => {
+                if (!wrap.contains(e.target)) close(true);
+            });
         }
 
         function switchStation(id) {
@@ -1458,8 +1631,8 @@
             }
         }
 
-        /* Station icon no longer displayed: station identity moved into the
-           channel switcher dropdown (see initStationSwitcher). */
+        /* Station icons are randomized per page load inside the searchable
+           combobox (see initStationSwitcher). */
 
         /* Current date on top of the screen (Gregorian + Hijri) */
         function renderTopDate() {
