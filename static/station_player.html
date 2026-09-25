@@ -1566,7 +1566,7 @@
                 input.setAttribute('aria-expanded', 'false');
                 if (restore) {
                     const c = stationsData.find(s => s.id === stationId);
-                    input.value = (icons[stationId] || '📻') + '  ' + (c ? c.name : stationId);
+                    input.value = (c ? iconForStation(c) : '📻') + '  ' + (c ? c.name : stationId);
                 }
             }
             function highlight(idx) {
