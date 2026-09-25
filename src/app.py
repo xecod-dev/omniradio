@@ -23,7 +23,7 @@ from .quotes_manager import QuotesManager
 from .yp_client import YPClient
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
-APP_VERSION = os.getenv("APP_VERSION", "2.6.3")
+APP_VERSION = os.getenv("APP_VERSION", "2.6.4")
 GIT_SHA = os.getenv("GIT_SHA", "local")
 APP_UPDATED = os.getenv("APP_UPDATED", "2026-09-25")
 
