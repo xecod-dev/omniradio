@@ -26,7 +26,8 @@
         "https://stream.zeno.fm/ru2hqnplhk7uv",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "abdulbasit",
@@ -40,7 +41,8 @@
         "archive:AbdulBasitTartilCairoEighths",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "alminshawi",
@@ -54,7 +56,8 @@
         "archive:c_202506vvv",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "alhussary",
@@ -68,7 +71,8 @@
         "archive:4752475475425724572457245742727636236",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "alafasi",
@@ -81,7 +85,8 @@
         "https://qurango.net/radio/mishary_alafasi",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "albanna",
@@ -95,7 +100,8 @@
         "mp3quran:https://server8.mp3quran.net/bna/",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "ammar-almulla",
@@ -109,7 +115,8 @@
         "local:/app/audio/cache/ammar-almulla",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "bandar-balila",
@@ -123,7 +130,8 @@
         "mp3quran:https://server6.mp3quran.net/balilah/",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "ahmad-tamim",
@@ -137,7 +145,8 @@
         "local:/app/audio/cache/ahmad-tamim",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "local-library",
@@ -151,7 +160,8 @@
         "local:/app/audio/uploads",
         "local:/app/audio/cache"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
     },
     {
       "id": "AdelRayan",
@@ -164,7 +174,64 @@
         "archive:AdelRayanPerJuz",
         "local:/app/audio/quran"
       ],
-      "bitrate": 128
+      "bitrate": 32,
+      "audio_channels": 1
+    },
+    {
+      "id": "majid-farouk",
+      "name": "الشيخ ماجد فاروق",
+      "name_en": "Sheikh Majid Farouk",
+      "category": "Quran Recitations",
+      "description": "تلاوات الشيخ ماجد فاروق من أرشيف الإنترنت",
+      "icon": "📖",
+      "sources": [
+        "archive:irgui82_majid-farok",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 32,
+      "audio_channels": 1
+    },
+    {
+      "id": "khaledabushady",
+      "name": "خالد أبو شادي",
+      "name_en": "Khalid Abu Shadi",
+      "category": "Quran Recitations",
+      "description": "تلاوات خالد أبو شادي من أرشيف الإنترنت",
+      "icon": "📜",
+      "sources": [
+        "archive:vwsiy2018_gv002_20180813",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 32,
+      "audio_channels": 1
+    },
+    {
+      "id": "salah-bukhatir",
+      "name": "صلاح بوخاطر",
+      "name_en": "Salah Bukhatir",
+      "category": "Quran Recitations",
+      "description": "مصحف صلاح بوخاطر كامل 128 ك من طريق الإسلام",
+      "icon": "📖",
+      "sources": [
+        "archive:xxx220616xxx",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 32,
+      "audio_channels": 1
+    },
+    {
+      "id": "abubakr-shatri",
+      "name": "أبوبكر الشاطري",
+      "name_en": "Abu Bakr Al-Shatri",
+      "category": "Quran Recitations",
+      "description": "مصحف أبو بكر الشاطري بجودة عالية كامل",
+      "icon": "📜",
+      "sources": [
+        "archive:002_20200425jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj",
+        "local:/app/audio/quran"
+      ],
+      "bitrate": 32,
+      "audio_channels": 1
     }
   ]
 }

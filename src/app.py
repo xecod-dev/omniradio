@@ -20,6 +20,7 @@ from .audio_manager import AudioManager
 from .engine import RadioEngine
 from .ftp_server import EmbeddedFTPServer
 from .quotes_manager import QuotesManager
+from .listener_stats import listener_stats
 from .yp_client import YPClient
 
 # Version metadata — bumped by hand on release edits; commit baked at Docker build time.
@@ -89,13 +90,77 @@ async def lifespan(app: FastAPI):
     await engine.start()
     await yp_client.start()
     quotes_task = asyncio.create_task(quotes_manager.start_daily_sync_worker())
+    watchdog_task = asyncio.create_task(_memory_watchdog())
     yield
     # Shutdown
     logger.info("Shutting down OmniRadio Studio...")
+    watchdog_task.cancel()
     quotes_task.cancel()
     await yp_client.stop()
     await engine.stop()
     ftp_server.stop()
+
+
+async def _memory_watchdog():
+    """Periodic RSS watchdog: gracefully exit if this process grows beyond
+    RSS_LIMIT_MiB MiB. Docker restart=unless-stopped brings it back clean.
+
+    This is a last-resort guard for the memory leak identified in ID-001.
+    When RSS exceeds the threshold, we log loudly, attempt a clean shutdown,
+    then call os._exit(0) so the process terminates even if cleanup hangs.
+    """
+    RSS_LIMIT_MiB = int(os.getenv("WATCHDOG_RSS_LIMIT_MiB", "2800"))
+    CHECK_INTERVAL_S = 60  # check every 60 seconds
+
+    import gc
+
+    while True:
+        await asyncio.sleep(CHECK_INTERVAL_S)
+        try:
+            with open("/proc/self/status") as f:
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        rss_kb = int(line.split()[1])
+                        rss_mib = rss_kb // 1024
+                        break
+                else:
+                    continue  # couldn't read RSS, skip
+
+            # Run GC + malloc_trim before deciding to exit
+            gc.collect()
+            try:
+                import ctypes
+                ctypes.CDLL("libc.so.6").malloc_trim(0)
+            except Exception:
+                pass
+
+            # Re-read after GC
+            with open("/proc/self/status") as f:
+                for line in f:
+                    if line.startswith("VmRSS:"):
+                        rss_kb = int(line.split()[1])
+                        rss_mib = rss_kb // 1024
+                        break
+
+            if rss_mib > RSS_LIMIT_MiB:
+                logger.error(
+                    f"[WATCHDOG] RSS {rss_mib} MiB exceeds limit {RSS_LIMIT_MiB} MiB "
+                    f"— initiating graceful restart (Docker will restart container). "
+                    f"This indicates the memory leak tracked in ID-001."
+                )
+                import signal
+                os.kill(os.getpid(), signal.SIGTERM)
+                await asyncio.sleep(10)
+                os._exit(0)  # force-exit if SIGTERM handler hung
+            elif rss_mib > RSS_LIMIT_MiB * 0.75:
+                logger.warning(
+                    f"[WATCHDOG] RSS {rss_mib} MiB is at {int(rss_mib/RSS_LIMIT_MiB*100)}% "
+                    f"of limit {RSS_LIMIT_MiB} MiB"
+                )
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
+            logger.warning(f"[WATCHDOG] Error reading RSS: {exc}")
 
 app = FastAPI(
     title="OmniRadio Multi-Station Studio",
@@ -575,8 +640,6 @@ async def stream_live(request: Request):
         "icy-name": icy_name,
         "icy-genre": icy_genre,
         "icy-br": "128",
-        "Accept-Ranges": "none",
-        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0",
@@ -587,6 +650,7 @@ async def stream_live(request: Request):
         return Response(status_code=200, media_type="audio/mpeg", headers=headers)
 
     quotes_manager.increment_listener("live")
+    listener_stats.record_connect(relay.station_id, request)
     return StreamingResponse(
         _stream_generator(relay),
         media_type="audio/mpeg",
@@ -608,8 +672,6 @@ async def stream_station(station_id: str, request: Request):
         "icy-name": icy_name,
         "icy-genre": icy_genre,
         "icy-br": str(relay.config.get("bitrate", 128)),
-        "Accept-Ranges": "none",
-        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0",
@@ -620,6 +682,7 @@ async def stream_station(station_id: str, request: Request):
         return Response(status_code=200, media_type="audio/mpeg", headers=headers)
 
     quotes_manager.increment_listener(station_id)
+    listener_stats.record_connect(station_id, request)
     return StreamingResponse(
         _stream_generator(relay),
         media_type="audio/mpeg",
@@ -1090,3 +1153,25 @@ async def api_get_version(request: Request):
             "api": f"{base_url}/api/status"
         }
     }
+
+
+@app.get("/api/listener/stats")
+async def api_listener_stats(request: Request):
+    """Public listener-location statistics aggregated from Cloudflare geo headers."""
+    return listener_stats.summary()
+
+
+@app.post("/api/listener/stats/clear")
+async def api_listener_stats_clear(request: Request):
+    """Admin-only: reset all listener-location counters."""
+    require_admin(request)
+    listener_stats.clear()
+    return {"ok": True, "message": "Listener location stats cleared."}
+
+
+@app.post("/api/listener/stats/save")
+async def api_listener_stats_save(request: Request):
+    """Admin-only: force-persist current counters to disk (auto-saved on every connect)."""
+    require_admin(request)
+    listener_stats.save()
+    return {"ok": True}

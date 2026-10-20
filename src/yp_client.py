@@ -25,9 +25,10 @@ Configuration (env):
 import asyncio
 import logging
 import time
+import urllib.parse
+import urllib.request
+import urllib.error
 from typing import Any, Dict, Optional, Set
-
-import requests
 
 logger = logging.getLogger("radio.yp")
 
@@ -189,24 +190,30 @@ class YPClient:
     async def _post(self, params: Dict[str, str]) -> Dict[str, str]:
         """POST form-encoded to the YP endpoint; returns response headers.
 
-        Uses a worker thread so requests' blocking IO never stalls the
-        asyncio event loop (same pattern as engine._build_ffmpeg_cmd_async).
+        Uses urllib.request (no external dependencies, no session state) in a
+        worker thread so blocking I/O never stalls the asyncio event loop.
         """
 
         def do_post() -> Dict[str, str]:
             try:
-                resp = requests.post(
+                body = urllib.parse.urlencode(params).encode("utf-8")
+                req = urllib.request.Request(
                     self.yp_url,
-                    data=params,
+                    data=body,
                     headers={
                         "User-Agent": self.user_agent,
                         "Accept": "*/*",
+                        "Content-Type": "application/x-www-form-urlencoded",
                     },
-                    timeout=15,
+                    method="POST",
                 )
-                return dict(resp.headers)
-            except requests.RequestException as exc:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    return dict(resp.headers)
+            except urllib.error.URLError as exc:
                 logger.warning(f"[YP] HTTP error: {exc}")
+                return {}
+            except Exception as exc:
+                logger.warning(f"[YP] Unexpected error: {exc}")
                 return {}
 
         loop = asyncio.get_running_loop()

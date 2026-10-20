@@ -24,7 +24,7 @@ ENV PORT=9000
 # Expose HTTP port 9000, FTP port 2121, and passive FTP ports 2122-2125
 EXPOSE 9000 2121 2122 2123 2124 2125
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:9000/healthz || exit 1
+HEALTHCHECK --interval=15s --timeout=8s --start-period=15s --retries=3 \
+  CMD curl --max-time 5 --connect-timeout 3 -f http://localhost:9000/healthz || exit 1
 
-CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "9000"]
+CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "9000", "--limit-concurrency", "900", "--loop", "asyncio"]

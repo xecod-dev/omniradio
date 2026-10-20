@@ -99,7 +99,8 @@ class ConfigManager:
         if self.get_station(sid):
             raise ValueError(f"Station with ID '{sid}' already exists")
         
-        station_data.setdefault("bitrate", 128)
+        station_data.setdefault("bitrate", 32)
+        station_data.setdefault("audio_channels", 1)
         station_data.setdefault("sources", [])
         self.data.setdefault("stations", []).append(station_data)
         self.save()

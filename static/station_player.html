@@ -1498,8 +1498,8 @@
         </div>
     </div>
 
-    <!-- Hidden Audio Element -->
-    <audio id="audioStream" preload="none"></audio>
+    <!-- Hidden Audio Element (preload="auto" to buffer ahead and smooth out bursts) -->
+    <audio id="audioStream" preload="auto"></audio>
 
     <script>
         const stationId = "{{STATION_ID}}";
@@ -1681,7 +1681,7 @@
         let lastProgress = Date.now();
         let watchdogTimer = null;
         let autoRetryTimer = null;
-        const STALL_MS = 30000;        // no stream progress for 30s -> connection is dead
+        const STALL_MS = 60000;        // no stream progress for 60s -> connection is dead
         const STALL_POLL_MS = 5000;    // watchdog heartbeat
         const MAX_ATTEMPTS = 3;        // auto-reconnect tries before showing the retry button
         const AUTO_RETRY_MS = 300000;  // auto-refresh every 5 minutes while failed
@@ -1756,11 +1756,53 @@
             armWatchdog();
         }
 
+        let screenWakeLock = null;
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator && !screenWakeLock) {
+                    screenWakeLock = await navigator.wakeLock.request('screen');
+                    screenWakeLock.addEventListener('release', () => {
+                        screenWakeLock = null;
+                    });
+                }
+            } catch (e) {}
+        }
+        function releaseWakeLock() {
+            if (screenWakeLock) {
+                try { screenWakeLock.release(); } catch (e) {}
+                screenWakeLock = null;
+            }
+        }
+
+        function updateMediaSession() {
+            if ('mediaSession' in navigator) {
+                try {
+                    const curStation = (typeof stationsData !== 'undefined' && Array.isArray(stationsData))
+                        ? stationsData.find(s => s.id === stationId) : null;
+                    const titleText = curStation ? (curStation.name || curStation.name_en) : document.title;
+                    navigator.mediaSession.metadata = new MediaMetadata({
+                        title: titleText,
+                        artist: 'OmniRadio • إذاعة القرآن الكريم',
+                        album: 'بث مباشر على مدار الساعة',
+                        artwork: [
+                            { src: '/static/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+                            { src: '/static/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+                        ]
+                    });
+                    navigator.mediaSession.setActionHandler('play', () => { if (!isPlaying) togglePlay(); });
+                    navigator.mediaSession.setActionHandler('pause', () => { if (isPlaying) togglePlay(); });
+                    navigator.mediaSession.setActionHandler('stop', () => { stopPlayback(); });
+                } catch (e) {}
+            }
+        }
+
         function connectStream(autoplayBlocked) {
             try { audio.pause(); } catch (e) {}
             audio.removeAttribute('src');
             try { audio.load(); } catch (e) {}
-            audio.src = streamUrl;
+            // Cache-busting query parameter ensures fresh streaming connection on mobile
+            const cacheBuster = (streamUrl.indexOf('?') === -1 ? '?' : '&') + '_t=' + Date.now();
+            audio.src = streamUrl + cacheBuster;
             audio.load();
             const attempt = audio.play();
             if (attempt && typeof attempt.catch === 'function') {
@@ -1774,12 +1816,15 @@
                     handleStreamFailure();
                 });
             }
+            updateMediaSession();
+            requestWakeLock();
         }
 
         function disconnectStream() {
             try { audio.pause(); } catch (e) {}
             audio.removeAttribute('src');
             try { audio.load(); } catch (e) {}
+            releaseWakeLock();
         }
 
         function stopPlayback() {
@@ -1857,6 +1902,8 @@
 
         // Watchdog: if the stream stops making progress (no playing/timeupdate/
         // progress events) for STALL_MS, tear the connection down and reconnect.
+        // Increased to 60s (was 30s) to handle bursty archive.org sources that
+        // legitimately stall for 10-20s between bursts.
         function armWatchdog() {
             clearInterval(watchdogTimer);
             watchdogTimer = null;
@@ -1878,6 +1925,8 @@
             lastProgress = Date.now();
             setPlayStatus(null);
             updateUI(true);
+            updateMediaSession();
+            requestWakeLock();
         });
 
         audio.addEventListener('waiting', () => {
@@ -1901,7 +1950,12 @@
         });
 
         audio.addEventListener('ended', () => {
-            stopPlayback();
+            if (isPlaying) {
+                console.log('Stream ended unexpectedly; auto-reconnecting…');
+                handleStreamFailure();
+            } else {
+                stopPlayback();
+            }
         });
 
         audio.addEventListener('error', () => {
@@ -2660,10 +2714,13 @@
             }
         }
 
-        // Keep connection awake if screen sleeps
+        // Keep connection awake if screen sleeps or tab switches
         document.addEventListener("visibilitychange", () => {
-            if (!document.hidden && isPlaying && audio.paused) {
-                audio.play().catch(() => {});
+            if (!document.hidden && isPlaying) {
+                if (audio.paused) {
+                    audio.play().catch(() => {});
+                }
+                requestWakeLock();
             }
         });
 

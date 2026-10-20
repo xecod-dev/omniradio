@@ -917,6 +917,22 @@
             </div>
         </div>
 
+        <!-- Listener Locations Card (collapsed by default, click header to toggle) -->
+        <div class="card geo-card" style="margin-top: 16px; padding: 12px 18px;">
+            <div class="geo-header" onclick="toggleGeo()" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; user-select:none;">
+                <div style="display:flex; align-items:center; gap:10px; font-size:14px;">
+                    <span>🌍</span>
+                    <span class="stat-label" style="margin:0;">مواقع المستمعين</span>
+                </div>
+                <div id="geoSummaryInline" style="display:flex; align-items:center; gap:14px; font-size:12px; opacity:0.75;">
+                    <span id="geoTotal">…</span>
+                    <span id="geoCountries">…</span>
+                </div>
+                <span id="geoChevron" style="font-size:12px; display:inline-block; transition:transform 0.2s;">▶</span>
+            </div>
+            <div id="geoBars" class="geo-bars collapsed" style="display:flex; flex-direction:column; gap:5px; overflow:hidden; max-height:0; opacity:0; transition:max-height 0.3s ease, opacity 0.25s;"></div>
+        </div>
+
         <!-- Stations Grid -->
         <div class="section-header">
             <div class="section-title">⚡ Live Radio Stations • محطات البث المباشر</div>
@@ -1467,6 +1483,7 @@
         // Initialize
         checkAdminAuth().then(() => {
             fetchStations();
+            refreshGeoStats();
             // Check if admin param is in URL
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('admin') === 'true' && !isAdmin) {
@@ -1474,7 +1491,96 @@
             }
         });
 
-        setInterval(fetchStations, 3000);
+        // ---- Listener location stats ----
+        const COUNTRY_NAMES = {
+            EG: 'مصر', SA: 'السعودية', AE: 'الإمارات', QA: 'قطر', KW: 'الكويت',
+            BH: 'البحرين', OM: 'عمان', JO: 'الأردن', PS: 'فلسطين', LB: 'لبنان',
+            IQ: 'العراق', SY: 'سوريا', MA: 'المغرب', DZ: 'الجزائر', TN: 'تونس',
+            LY: 'ليبيا', SD: 'السودان', YE: 'اليمن', TR: 'تركيا', US: 'أمريكا',
+            GB: 'بريطانيا', FR: 'فرنسا', DE: 'ألمانيا', NL: 'هولندا', CA: 'كندا',
+            AU: 'أستراليا', ID: 'إندونيسيا', MY: 'ماليزيا', PK: 'باكستان',
+            IN: 'الهند', BD: 'بنغلاديش', SE: 'السويد', NO: 'النرويج', ES: 'إسبانيا',
+            IT: 'إيطاليا', XX: 'غير معروف'
+        };
+        let _geoTimer = null;
+
+        async function refreshGeoStats() {
+            try {
+                const res = await fetch('/api/listener/stats');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                renderGeoStats(await res.json());
+            } catch (e) {
+                const t = document.getElementById('geoTotal');
+                if (t) t.textContent = 'تعذر التحميل';
+            }
+        }
+
+        function toggleGeo() {
+            const bars = document.getElementById('geoBars');
+            const chev = document.getElementById('geoChevron');
+            if (!bars || !chev) return;
+            const opening = bars.classList.contains('collapsed');
+            bars.classList.toggle('collapsed');
+            // expand height to fit ~5 bars; collapse back to 0
+            bars.style.maxHeight = opening ? '160px' : '0px';
+            bars.style.opacity = opening ? '1' : '0';
+            chev.style.transform = opening ? 'rotate(90deg)' : '';
+            if (opening) refreshGeoStats(); // fresh data on expand
+        }
+
+        function renderGeoStats(stats) {
+            const bars = document.getElementById('geoBars');
+            if (!bars) return;
+
+            const counts = stats.countries || [];
+            const total = stats.total_connects || 0;
+            const distinct = stats.distinct_countries || 0;
+
+            const totalEl = document.getElementById('geoTotal');
+            const countriesEl = document.getElementById('geoCountries');
+            if (totalEl) totalEl.textContent = total.toLocaleString() + ' اتصالات';
+            if (countriesEl) countriesEl.textContent = distinct + ' دول';
+
+            if (!counts.length) {
+                bars.innerHTML = '<div style="opacity:0.6; font-size:12px;">لا توجد اتصالات بعد — عند أول استماع ستظهر الأعلام هنا.</div>';
+                return;
+            }
+
+            const max = counts[0].count || 1;
+            const top = counts.slice(0, 5); // top 5 countries (compact card)
+            bars.innerHTML = top.map((c, i) => {
+                const name = COUNTRY_NAMES[c.country] || c.country;
+                const pct = Math.round((c.count / max) * 100);
+                return '<div style="display:flex; align-items:center; gap:8px;">' +
+                    '<div style="width:100px; display:flex; gap:5px; align-items:center; font-size:12px;">' +
+                        '<span>' + c.flag + '</span><span style="direction:rtl;">' + name + '</span>' +
+                        (i === 0 ? '<span style="font-size:10px; color: var(--gold);">👑</span>' : '') +
+                    '</div>' +
+                    '<div style="flex:1; height:10px; background: rgba(255,255,255,0.06); border-radius:5px; overflow:hidden;">' +
+                        '<div style="width:' + pct + '%; height:100%; background: linear-gradient(90deg, var(--accent), var(--gold)); border-radius:5px; transition: width 0.5s;"></div>' +
+                    '</div>' +
+                    '<div style="width:55px; text-align:left; font-size:11px; font-family: monospace; opacity:0.85;">' + c.count.toLocaleString() + '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        // Refresh the geo card every 30s while the tab is visible.
+        _geoTimer = setInterval(() => {
+            if (document.visibilityState !== 'hidden') refreshGeoStats();
+        }, 30000);
+
+
+        // Poll every 10s (was 3s — too aggressive under load; 10s is fine for station status).
+        // Pause polling entirely when the browser tab is hidden to reduce server load.
+        let _stationsPollTimer = setInterval(fetchStations, 10000);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                clearInterval(_stationsPollTimer);
+            } else {
+                fetchStations(); // immediate refresh on tab focus
+                _stationsPollTimer = setInterval(fetchStations, 10000);
+            }
+        });
 
         // Audio reactivity for background
         const audioEl = document.getElementById('audioElement');

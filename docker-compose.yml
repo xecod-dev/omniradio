@@ -9,6 +9,14 @@ services:
     image: radio-app:latest
     container_name: radio-app
     restart: unless-stopped
+    # 2026-10-02 incident: the uvicorn parent leaked ~48 MiB/min (~2.8 GiB/hr)
+    # while fanning out one ffmpeg transcode per station. It reached 12.4 GiB
+    # in ~7h and starved the whole 16 GiB host (swap 100% full), which took
+    # the unrelated mce-dashboard down with it -- /api/health went from 12 ms
+    # to 8.4 s and the operator's browser timed out. Baseline RSS is ~225 MiB.
+    # Cap it so a leak can never take down a co-tenant service again.
+    mem_limit: 4g
+    mem_reservation: 512m
     environment:
       - APP_VERSION=${APP_VERSION:-2.6.4}
       - APP_UPDATED=${APP_UPDATED:-2026-09-25}
@@ -20,6 +28,11 @@ services:
       - YP_URL=${YP_URL:-http://icecast-yp.internet-radio.com}
       - YP_ENABLED=${YP_ENABLED:-1}
       - YP_INTERVAL=${YP_INTERVAL:-60}
+      # glibc malloc: release free pages to OS after each GC cycle.
+      # Prevents the process from holding onto GiB of freed heap pages.
+      # 131072 bytes (128 KB) trim threshold — aggressive enough to keep RSS sane.
+      - MALLOC_TRIM_THRESHOLD_=131072
+      - MALLOC_MMAP_THRESHOLD_=131072
     ports:
       - "9000:9000"
       - "2121:2121"
