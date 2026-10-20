@@ -232,7 +232,12 @@ class StationRelay:
         stays contiguous (cyclic rotation), so surahs still play in sequence
         from wherever the rotation lands.
         """
-        cache_meta_data = f"/app/data/archive_meta_{identifier}.json"
+        # Metadata cache lives on the CONTAINER filesystem (/tmp), not on the
+        # bind-mounted host volume: /app/data is the slow, nearly-full ext4
+        # volume whose journal commits (jbd2_log_wait_commit) stall the
+        # process (ID-031/ID-049 family). The cache is a pure speed-up — it
+        # can be rebuilt from archive.org at any time.
+        cache_meta_data = f"/tmp/archive_meta_{identifier}.json"
         cache_meta_tmp = f"/tmp/archive_meta_{identifier}.json"
         cache_meta = cache_meta_data if os.path.exists(cache_meta_data) else cache_meta_tmp
         names = []
@@ -261,7 +266,7 @@ class StationRelay:
             if not names:
                 raise ValueError(f"No MP3 files found in archive.org item '{identifier}'")
             try:
-                save_path = cache_meta_data if os.path.isdir("/app/data") else cache_meta_tmp
+                save_path = cache_meta_tmp  # container-local, never the host volume
                 with open(save_path, "w", encoding="utf-8") as cf:
                     json.dump(names, cf)
             except Exception:
@@ -590,11 +595,19 @@ class StationRelay:
                     for queue in list(self.subscribers):
                         try:
                             if queue.full():
-                                # Discard oldest if queue is full to prevent lag
-                                try:
-                                    queue.get_nowait()
-                                except asyncio.QueueEmpty:
-                                    pass
+                                # Client is not draining the queue (dead tab,
+                                # stalled mobile app, half-open Cloudflare
+                                # connection). Discarding the oldest chunk and
+                                # pushing on forever keeps writing into a dead
+                                # transport (the "socket.send() raised
+                                # exception" flood) — so drop the subscriber,
+                                # but only after it has been full for a while
+                                # (a live but slow client gets a grace period).
+                                info = _QUEUE_LIVENESS.get(id(queue))
+                                now = time.time()
+                                if info is not None and (now - info[0]) > STALE_SUBSCRIBER_SECONDS:
+                                    dead_subscribers.append(queue)
+                                    continue
                             queue.put_nowait(chunk)
                         except Exception:
                             dead_subscribers.append(queue)

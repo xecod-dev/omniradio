@@ -5,6 +5,7 @@ import socket
 import logging
 import hashlib
 import asyncio
+import threading
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
@@ -91,14 +92,67 @@ async def lifespan(app: FastAPI):
     await yp_client.start()
     quotes_task = asyncio.create_task(quotes_manager.start_daily_sync_worker())
     watchdog_task = asyncio.create_task(_memory_watchdog())
+    stall_task = asyncio.create_task(_loop_stall_detector())
     yield
     # Shutdown
     logger.info("Shutting down OmniRadio Studio...")
+    stall_task.cancel()
     watchdog_task.cancel()
     quotes_task.cancel()
     await yp_client.stop()
     await engine.stop()
     ftp_server.stop()
+
+
+async def _loop_stall_detector():
+    """Detect event-loop stalls and dump every thread's stack.
+
+    A blocked event loop is the failure mode behind the Cloudflare 524s
+    (ID-049 family): the app stops answering /healthz while the process is
+    still alive, so Docker's restart policy never fires. This task measures
+    event-loop lag; when it exceeds STALL_THRESHOLD_S it dumps the Python
+    stack of EVERY thread — which names the offending call — and (optionally)
+    exits so the watchdog/restart policy recovers the service.
+    """
+    STALL_THRESHOLD_S = float(os.getenv("LOOP_STALL_THRESHOLD_S", "8"))
+    CHECK_INTERVAL_S = 1.0
+
+    while True:
+        await asyncio.sleep(CHECK_INTERVAL_S)
+        lag = 0.0
+        try:
+            start = time.perf_counter()
+            await asyncio.sleep(0)  # yield once; measures scheduler lag
+            lag = time.perf_counter() - start
+            # A cheap heartbeat: sleep(0) returns almost instantly unless the
+            # loop was blocked. Measure with a real sleep instead.
+            t0 = time.perf_counter()
+            await asyncio.sleep(0.05)
+            lag = time.perf_counter() - t0 - 0.05
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            continue
+
+        if lag > STALL_THRESHOLD_S:
+            logger.error(
+                f"[STALL] Event loop blocked for {lag:.1f}s — dumping thread stacks."
+            )
+            try:
+                import faulthandler
+                import sys as _sys
+                faulthandler.dump_traceback(file=_sys.stderr, all_threads=True)
+            except Exception:
+                pass
+            logger.error(
+                f"[STALL] Thread states:\n" + "\n".join(
+                    f"  {t.name}: {t._state}"
+                    for t in threading.enumerate()
+                )
+            )
+            if os.getenv("LOOP_STALL_EXIT", "1") == "1":
+                logger.error("[STALL] Exiting so the supervisor restarts a clean process.")
+                os._exit(1)
 
 
 async def _memory_watchdog():
@@ -108,39 +162,42 @@ async def _memory_watchdog():
     This is a last-resort guard for the memory leak identified in ID-001.
     When RSS exceeds the threshold, we log loudly, attempt a clean shutdown,
     then call os._exit(0) so the process terminates even if cleanup hangs.
+
+    NOTE: gc.collect() + malloc_trim() are CPU/heap walks that can block for
+    seconds on a large heap. They run on a WORKER THREAD (never on the event
+    loop) — running them inline froze the whole radio app (ID-049 family).
     """
     RSS_LIMIT_MiB = int(os.getenv("WATCHDOG_RSS_LIMIT_MiB", "2800"))
     CHECK_INTERVAL_S = 60  # check every 60 seconds
 
     import gc
 
+    def _rss_mib() -> int:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) // 1024
+        return 0
+
+    def _gc_and_trim() -> None:
+        # Runs off the event loop: heap walk of a multi-hundred-MB process.
+        gc.collect()
+        try:
+            import ctypes
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except Exception:
+            pass
+
     while True:
         await asyncio.sleep(CHECK_INTERVAL_S)
         try:
-            with open("/proc/self/status") as f:
-                for line in f:
-                    if line.startswith("VmRSS:"):
-                        rss_kb = int(line.split()[1])
-                        rss_mib = rss_kb // 1024
-                        break
-                else:
-                    continue  # couldn't read RSS, skip
+            rss_mib = await asyncio.to_thread(_rss_mib)
 
-            # Run GC + malloc_trim before deciding to exit
-            gc.collect()
-            try:
-                import ctypes
-                ctypes.CDLL("libc.so.6").malloc_trim(0)
-            except Exception:
-                pass
+            # Run GC + malloc_trim before deciding to exit (worker thread)
+            await asyncio.to_thread(_gc_and_trim)
 
             # Re-read after GC
-            with open("/proc/self/status") as f:
-                for line in f:
-                    if line.startswith("VmRSS:"):
-                        rss_kb = int(line.split()[1])
-                        rss_mib = rss_kb // 1024
-                        break
+            rss_mib = await asyncio.to_thread(_rss_mib)
 
             if rss_mib > RSS_LIMIT_MiB:
                 logger.error(
@@ -601,12 +658,35 @@ async def generate_single_station_playlist(station_id: str, request: Request):
         headers={"Content-Disposition": f'attachment; filename="{station_id}.m3u"'}
     )
 
-async def _stream_generator(relay):
-    """Subscribes to station relay and yields audio MP3 chunks."""
+async def _stream_generator(relay, request: Request = None):
+    """Subscribes to station relay and yields audio MP3 chunks.
+
+    Dead-client detection matters a lot here: when a listener disappears
+    (closed tab, mobile app backgrounded, Cloudflare dropping the origin
+    connection), uvicorn's transport keeps accepting our writes and silently
+    discards them — logging "socket.send() raised exception" for every chunk
+    (log flood → disk/journal pressure → event-loop stalls → 524s). The
+    relay also keeps believing the client is listening.
+
+    So we poll `request.is_disconnected()` (uvicorn signals http.disconnect
+    when the peer closes) and bail out promptly, unsubscribing the queue.
+    """
     queue = relay.subscribe()
     try:
         while True:
-            chunk = await queue.get()
+            if request is not None:
+                try:
+                    if await request.is_disconnected():
+                        return
+                except Exception:
+                    pass
+            try:
+                # Short timeout so the disconnect check runs often.
+                chunk = await asyncio.wait_for(queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                continue
+            except (asyncio.CancelledError, GeneratorExit):
+                raise
             yield chunk
     except (asyncio.CancelledError, GeneratorExit):
         pass
@@ -652,7 +732,7 @@ async def stream_live(request: Request):
     quotes_manager.increment_listener("live")
     listener_stats.record_connect(relay.station_id, request)
     return StreamingResponse(
-        _stream_generator(relay),
+        _stream_generator(relay, request),
         media_type="audio/mpeg",
         headers=headers
     )
@@ -684,7 +764,7 @@ async def stream_station(station_id: str, request: Request):
     quotes_manager.increment_listener(station_id)
     listener_stats.record_connect(station_id, request)
     return StreamingResponse(
-        _stream_generator(relay),
+        _stream_generator(relay, request),
         media_type="audio/mpeg",
         headers=headers
     )
@@ -857,7 +937,8 @@ async def api_prayer_times(
         return result
 
     if lat == 0 and lng == 0 and city:
-        result = _aladhan_get(
+        result = await asyncio.to_thread(
+            _aladhan_get,
             f"https://api.aladhan.com/v1/timingsByCity/{api_date}"
             f"?city={city}&country={country or 'Egypt'}&method=5"
         )
@@ -895,7 +976,7 @@ async def api_prayer_times(
         else:
             return {"error": "تعذر جلب أوقات الصلاة لهذه المدينة"}
     elif lat != 0 or lng != 0:
-        result = _aladhan_timings(lat, lng, api_date, tz)
+        result = await asyncio.to_thread(_aladhan_timings, lat, lng, api_date, tz)
         if not result:
             return {"error": "تعذر جلب أوقات الصلاة لهذا الموقع"}
     else:
