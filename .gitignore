@@ -44,3 +44,16 @@ scripts/radio_browser_sync.log
 
 # Runtime state (regenerates daily)
 data/azkar.json
+
+# Media binaries excluded from git (user request 2026-11-11): kept local-only
+*.mov
+*.mp4
+*.mkv
+*.avi
+*.webm
+*.mp3
+*.wav
+*.aac
+*.m4a
+*.ogg
+*.flac
